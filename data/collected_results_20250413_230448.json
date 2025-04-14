@@ -1,0 +1,101 @@
+{
+  "timestamp": "2025-04-13 23:04:48",
+  "point_to_point_tests": [
+    {
+      "status": "success",
+      "protocol": "TCP",
+      "bits_per_second": 50435910.36952474,
+      "bytes": 63045632,
+      "seconds": 10.000118017196655,
+      "retransmits": 0,
+      "file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/p2p_18.183.127.24_to_18.130.245.213_20250413_230236.json",
+      "source_region": "eu-west-2",
+      "target_region": "ap-northeast-1"
+    },
+    {
+      "status": "success",
+      "protocol": "TCP",
+      "bits_per_second": 80422529.1688401,
+      "bytes": 100532224,
+      "seconds": 10.000404119491577,
+      "retransmits": 0,
+      "file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/p2p_100.26.179.236_to_18.183.127.24_20250413_230328.json",
+      "source_region": "ap-northeast-1",
+      "target_region": "us-east-1"
+    },
+    {
+      "status": "success",
+      "protocol": "TCP",
+      "bits_per_second": 154236659.98006135,
+      "bytes": 192806912,
+      "seconds": 10.000575065612793,
+      "retransmits": 0,
+      "file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/p2p_18.130.245.213_to_100.26.179.236_20250413_230345.json",
+      "source_region": "us-east-1",
+      "target_region": "eu-west-2"
+    },
+    {
+      "status": "success",
+      "protocol": "TCP",
+      "bits_per_second": 157599334.54702973,
+      "bytes": 197001216,
+      "seconds": 10.000103950500488,
+      "retransmits": 0,
+      "file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/p2p_100.26.179.236_to_18.130.245.213_20250413_230254.json",
+      "source_region": "eu-west-2",
+      "target_region": "us-east-1"
+    },
+    {
+      "status": "success",
+      "protocol": "TCP",
+      "bits_per_second": 50435602.53866953,
+      "bytes": 63045632,
+      "seconds": 10.000179052352905,
+      "retransmits": 0,
+      "file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/p2p_18.130.245.213_to_18.183.127.24_20250413_230309.json",
+      "source_region": "ap-northeast-1",
+      "target_region": "eu-west-2"
+    },
+    {
+      "status": "success",
+      "protocol": "TCP",
+      "bits_per_second": 76334714.85429302,
+      "bytes": 95420416,
+      "seconds": 10.000211954116821,
+      "retransmits": 0,
+      "file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/p2p_18.183.127.24_to_100.26.179.236_20250413_230359.json",
+      "source_region": "us-east-1",
+      "target_region": "ap-northeast-1"
+    }
+  ],
+  "udp_multicast_tests": [
+    {
+      "status": "success",
+      "protocol": "UDP",
+      "bits_per_second": 766417457.8630418,
+      "bytes": 958024312,
+      "seconds": 10.000025987625122,
+      "jitter_ms": 0.15207806781792832,
+      "lost_packets": 464712,
+      "packets": 661606,
+      "lost_percent": 70.23999177758364,
+      "file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/udp_multicast_18.130.245.213_to_100.26.179.236_20250413_230414.json",
+      "server_region": "eu-west-2",
+      "client_region": null
+    },
+    {
+      "status": "success",
+      "protocol": "UDP",
+      "bits_per_second": 752324615.3287916,
+      "bytes": 940407944,
+      "seconds": 10.000023126602173,
+      "jitter_ms": 0.048749102355934486,
+      "lost_packets": 367002,
+      "packets": 649403,
+      "lost_percent": 56.51375186132494,
+      "file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/udp_multicast_18.130.245.213_to_18.183.127.24_20250413_230414.json",
+      "server_region": "eu-west-2",
+      "client_region": null
+    }
+  ]
+}

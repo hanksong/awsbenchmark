@@ -1,0 +1,75 @@
+.html
+terraform/.terraform.lock.hcl
+# 操作系统生成的文件
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Python相关
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+.env
+
+# Terraform相关
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# 日志文件
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 数据和中间文件
+*.csv
+*.dat
+*.out
+data/raw/
+*.bak
+*.swp
+*.swo
+
+# 其他大型文件和中间文件
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.pdf
+runs/
+
+# IDE和编辑器相关
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/

@@ -1,0 +1,187 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AWS Network Benchmark Report</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                margin: 0;
+                padding: 20px;
+                color: #333;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+            h1, h2, h3 {
+                color: #0066cc;
+            }
+            .summary-box {
+                background-color: #f5f5f5;
+                border-left: 4px solid #0066cc;
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                margin-bottom: 20px;
+            }
+            th, td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            th {
+                background-color: #f2f2f2;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .image-container {
+                margin: 20px 0;
+            }
+            .image-container img {
+                max-width: 100%;
+                height: auto;
+                border: 1px solid #ddd;
+            }
+            .footer {
+                margin-top: 30px;
+                padding-top: 10px;
+                border-top: 1px solid #ddd;
+                font-size: 0.8em;
+                color: #666;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>AWS Network Benchmark Report</h1>
+            <p>Generated at: 2025-04-13 23:04:52</p>
+            
+            <div class="summary-box">
+                <h2>Test Summary</h2>
+                <p>Point-to-point tests: 6 (Successful: 6)</p>
+                <p>UDP tests: 2 (Successful: 2)</p>
+            </div>
+            
+            
+            <h2>Point-to-Point Test Results</h2>
+            <div class="summary-box">
+                <p>Average Bandwidth: 94.91 Mbps</p>
+                <p>Minimum Bandwidth: 50.44 Mbps</p>
+                <p>Maximum Bandwidth: 157.60 Mbps</p>
+                <p>Median Bandwidth: 78.38 Mbps</p>
+            </div>
+            
+            <h3>Inter-Region Bandwidth Statistics</h3>
+            <table>
+                <tr>
+                    <th>Source Region</th>
+                    <th>Target Region</th>
+                    <th>Average Bandwidth (Mbps)</th>
+                    <th>Minimum Bandwidth (Mbps)</th>
+                    <th>Maximum Bandwidth (Mbps)</th>
+                </tr>
+                
+                <tr>
+                    <td>ap-northeast-1</td>
+                    <td>eu-west-2</td>
+                    <td>50.44</td>
+                    <td>50.44</td>
+                    <td>50.44</td>
+                </tr>
+                
+                <tr>
+                    <td>ap-northeast-1</td>
+                    <td>us-east-1</td>
+                    <td>80.42</td>
+                    <td>80.42</td>
+                    <td>80.42</td>
+                </tr>
+                
+                <tr>
+                    <td>eu-west-2</td>
+                    <td>ap-northeast-1</td>
+                    <td>50.44</td>
+                    <td>50.44</td>
+                    <td>50.44</td>
+                </tr>
+                
+                <tr>
+                    <td>eu-west-2</td>
+                    <td>us-east-1</td>
+                    <td>157.60</td>
+                    <td>157.60</td>
+                    <td>157.60</td>
+                </tr>
+                
+                <tr>
+                    <td>us-east-1</td>
+                    <td>ap-northeast-1</td>
+                    <td>76.33</td>
+                    <td>76.33</td>
+                    <td>76.33</td>
+                </tr>
+                
+                <tr>
+                    <td>us-east-1</td>
+                    <td>eu-west-2</td>
+                    <td>154.24</td>
+                    <td>154.24</td>
+                    <td>154.24</td>
+                </tr>
+                
+            </table>
+            
+            
+            
+            
+            
+            
+            
+            <h2>UDP Test Results</h2>
+            <div class="summary-box">
+                <p>Average Bandwidth: 759.37 Mbps</p>
+                <p>Minimum Bandwidth: 752.32 Mbps</p>
+                <p>Maximum Bandwidth: 766.42 Mbps</p>
+                <p>Median Bandwidth: 759.37 Mbps</p>
+                <p>Average Packet Loss: 63.38%</p>
+                <p>Average Jitter: 0.10 ms</p>
+            </div>
+            
+            <h3>Inter-Region UDP Statistics</h3>
+            <table>
+                <tr>
+                    <th>Server Region</th>
+                    <th>Client Region</th>
+                    <th>Average Bandwidth (Mbps)</th>
+                    <th>Average Packet Loss (%)</th>
+                    <th>Average Jitter (ms)</th>
+                </tr>
+                
+            </table>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            <div class="footer">
+                <p>Report generated by AWS Network Benchmark Tool | 2025-04-13 23:04:52</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    

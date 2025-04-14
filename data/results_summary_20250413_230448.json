@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-04-13 23:04:48",
+  "p2p_test_count": 6,
+  "udp_test_count": 2,
+  "p2p_success_count": 6,
+  "udp_success_count": 2,
+  "p2p_avg_bandwidth_mbps": 94.91079190973642,
+  "p2p_min_bandwidth_mbps": 50.43560253866953,
+  "p2p_max_bandwidth_mbps": 157.59933454702974,
+  "p2p_region_stats": [
+    {
+      "source_region": "ap-northeast-1",
+      "target_region": "eu-west-2",
+      "avg_bandwidth_mbps": 50.43560253866953
+    },
+    {
+      "source_region": "ap-northeast-1",
+      "target_region": "us-east-1",
+      "avg_bandwidth_mbps": 80.4225291688401
+    },
+    {
+      "source_region": "eu-west-2",
+      "target_region": "ap-northeast-1",
+      "avg_bandwidth_mbps": 50.43591036952474
+    },
+    {
+      "source_region": "eu-west-2",
+      "target_region": "us-east-1",
+      "avg_bandwidth_mbps": 157.59933454702974
+    },
+    {
+      "source_region": "us-east-1",
+      "target_region": "ap-northeast-1",
+      "avg_bandwidth_mbps": 76.33471485429303
+    },
+    {
+      "source_region": "us-east-1",
+      "target_region": "eu-west-2",
+      "avg_bandwidth_mbps": 154.23665998006135
+    }
+  ],
+  "udp_avg_bandwidth_mbps": 759.3710365959166,
+  "udp_min_bandwidth_mbps": 752.3246153287917,
+  "udp_max_bandwidth_mbps": 766.4174578630417,
+  "udp_avg_jitter_ms": 0.1004135850869314,
+  "udp_avg_packet_loss_percent": 63.376871819454294,
+  "udp_region_stats": []
+}

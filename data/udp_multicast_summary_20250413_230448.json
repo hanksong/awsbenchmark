@@ -1,0 +1,22 @@
+{
+  "server_region": "eu-west-2",
+  "server_ip": "18.130.245.213",
+  "client_regions": [
+    "ap-northeast-1",
+    "us-east-1"
+  ],
+  "ip_type": "public",
+  "timestamp": "2025-04-13 23:04:48",
+  "results": [
+    {
+      "client_ip": "18.183.127.24",
+      "server_ip": "18.130.245.213",
+      "result_file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/udp_multicast_18.130.245.213_to_18.183.127.24_20250413_230414.json"
+    },
+    {
+      "client_ip": "100.26.179.236",
+      "server_ip": "18.130.245.213",
+      "result_file": "/Users/hank/Desktop/UIUC/IE421/AWS-EC2-Network-Benchmark/data/udp_multicast_18.130.245.213_to_100.26.179.236_20250413_230414.json"
+    }
+  ]
+}

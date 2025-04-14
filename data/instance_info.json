@@ -1,0 +1,28 @@
+{
+  "instances": {
+    "eu-west-2": {
+      "public_ips": [
+        "18.130.245.213"
+      ],
+      "private_ips": [
+        "10.2.1.225"
+      ]
+    },
+    "ap-northeast-1": {
+      "public_ips": [
+        "18.183.127.24"
+      ],
+      "private_ips": [
+        "10.0.1.9"
+      ]
+    },
+    "us-east-1": {
+      "public_ips": [
+        "100.26.179.236"
+      ],
+      "private_ips": [
+        "10.1.1.86"
+      ]
+    }
+  }
+}
