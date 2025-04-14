@@ -1,11 +1,11 @@
 .html
 terraform/.terraform.lock.hcl
-# 操作系统生成的文件
+# Operating system generated files
 .DS_Store
 **/.DS_Store
 Thumbs.db
 
-# Python相关
+# Python related
 __pycache__/
 *.py[cod]
 *$py.class
@@ -28,8 +28,10 @@ var/
 *.egg
 venv/
 .env
+.png
+.html
 
-# Terraform相关
+# Terraform related
 **/.terraform/*
 *.tfstate
 *.tfstate.*
@@ -41,14 +43,14 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# 日志文件
+# Log files
 *.log
 logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# 数据和中间文件
+# Data and intermediate files
 *.csv
 *.dat
 *.out
@@ -57,7 +59,7 @@ data/raw/
 *.swp
 *.swo
 
-# 其他大型文件和中间文件
+# Other large files and intermediate files
 *.zip
 *.tar.gz
 *.rar
@@ -65,7 +67,7 @@ data/raw/
 *.pdf
 runs/
 
-# IDE和编辑器相关
+# IDE and editor related
 .idea/
 .vscode/
 *.sublime-project
