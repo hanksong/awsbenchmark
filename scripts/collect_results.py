@@ -8,6 +8,7 @@ import os
 import sys
 import glob
 from datetime import datetime
+import re
 
 def parse_iperf3_result(result_file):
     """解析iperf3 JSON结果文件"""
@@ -83,35 +84,32 @@ def collect_results(data_dir, output_file=None):
     p2p_files = glob.glob(os.path.join(data_dir, 'p2p_*.json'))
     udp_files = glob.glob(os.path.join(data_dir, 'udp_multicast_*.json'))
     
-    # 解析点对点测试结果
-    p2p_results = []
-    for file in p2p_files:
-        if 'summary' not in file:  # 跳过摘要文件
-            result = parse_iperf3_result(file)
-            filename = os.path.basename(file)
-            region_info = extract_region_info(filename)
-            
-            if region_info:
-                result.update(region_info)
-            
-            p2p_results.append(result)
-    
-    # 解析UDP测试结果
-    udp_results = []
-    for file in udp_files:
-        if 'summary' not in file:  # 跳过摘要文件
-            result = parse_iperf3_result(file)
-            filename = os.path.basename(file)
-            region_info = extract_region_info(filename)
-            
-            if region_info:
-                result.update(region_info)
-            
-            udp_results.append(result)
-    
-    # 查找并解析摘要文件以获取区域信息
+    # 首先查找并解析摘要文件以获取区域信息
     p2p_summary_files = glob.glob(os.path.join(data_dir, 'p2p_test_summary_*.json'))
     udp_summary_files = glob.glob(os.path.join(data_dir, 'udp_multicast_summary_*.json'))
+    
+    # 创建IP到区域的映射
+    ip_to_region_map = {}
+    # 先从UDP摘要文件获取
+    for summary_file in udp_summary_files:
+        try:
+            with open(summary_file, 'r') as f:
+                summary = json.load(f)
+                if 'ip_to_region_map' in summary:
+                    ip_to_region_map.update(summary['ip_to_region_map'])
+                else:
+                    # 兼容旧版本摘要文件
+                    server_region = summary.get('server_region')
+                    server_ip = summary.get('server_ip')
+                    if server_ip and server_region:
+                        ip_to_region_map[server_ip] = server_region
+                    
+                    for i, result in enumerate(summary.get('results', [])):
+                        client_ip = result.get('client_ip')
+                        if client_ip and i < len(summary.get('client_regions', [])):
+                            ip_to_region_map[client_ip] = summary['client_regions'][i]
+        except Exception as e:
+            print(f"警告：无法解析UDP摘要文件 {summary_file}: {e}")
     
     p2p_region_map = {}
     for summary_file in p2p_summary_files:
@@ -125,41 +123,57 @@ def collect_results(data_dir, output_file=None):
                         'target_region': test['target_region']
                     }
         except Exception as e:
-            print(f"警告：无法解析摘要文件 {summary_file}: {e}")
+            print(f"警告：无法解析P2P摘要文件 {summary_file}: {e}")
     
-    udp_region_map = {}
-    for summary_file in udp_summary_files:
-        try:
-            with open(summary_file, 'r') as f:
-                summary = json.load(f)
-                server_region = summary.get('server_region')
-                for result in summary.get('results', []):
-                    result_file = os.path.basename(result['result_file'])
-                    # 找到客户端区域
-                    client_region = None
-                    for i, ip in enumerate(summary.get('client_regions', [])):
-                        if i < len(summary.get('client_regions', [])):
-                            if result['client_ip'] == ip:
-                                client_region = summary['client_regions'][i]
-                                break
+    # 解析点对点测试结果
+    p2p_results = []
+    for file in p2p_files:
+        if 'summary' not in file:  # 跳过摘要文件
+            result = parse_iperf3_result(file)
+            filename = os.path.basename(file)
+            region_info = extract_region_info(filename)
+            
+            if region_info:
+                result.update(region_info)
+            
+            # 从区域映射获取信息
+            if filename in p2p_region_map:
+                result.update(p2p_region_map[filename])
+            
+            p2p_results.append(result)
+    
+    # 解析UDP测试结果
+    udp_results = []
+    for file in udp_files:
+        if 'summary' not in file:  # 跳过摘要文件
+            result = parse_iperf3_result(file)
+            filename = os.path.basename(file)
+            
+            # 尝试直接从文件提取客户端和服务器区域
+            try:
+                with open(file, 'r') as f:
+                    file_data = json.load(f)
+                    if 'server_region' in file_data:
+                        result['server_region'] = file_data['server_region']
+                    if 'client_region' in file_data:
+                        result['client_region'] = file_data['client_region']
+            except Exception:
+                pass
+            
+            # 如果没有区域信息，尝试从文件名提取IP，然后映射到区域
+            if 'server_region' not in result or 'client_region' not in result:
+                ip_info = extract_ip_info(filename)
+                if ip_info:
+                    server_ip = ip_info.get('server_ip')
+                    client_ip = ip_info.get('client_ip')
                     
-                    udp_region_map[result_file] = {
-                        'server_region': server_region,
-                        'client_region': client_region
-                    }
-        except Exception as e:
-            print(f"警告：无法解析摘要文件 {summary_file}: {e}")
-    
-    # 将区域信息添加到测试结果中
-    for result in p2p_results:
-        filename = os.path.basename(result['file'])
-        if filename in p2p_region_map:
-            result.update(p2p_region_map[filename])
-    
-    for result in udp_results:
-        filename = os.path.basename(result['file'])
-        if filename in udp_region_map:
-            result.update(udp_region_map[filename])
+                    if server_ip and server_ip in ip_to_region_map:
+                        result['server_region'] = ip_to_region_map[server_ip]
+                    
+                    if client_ip and client_ip in ip_to_region_map:
+                        result['client_region'] = ip_to_region_map[client_ip]
+            
+            udp_results.append(result)
     
     # 整合所有结果
     all_results = {
@@ -177,11 +191,21 @@ def collect_results(data_dir, output_file=None):
     with open(output_path, 'w') as f:
         json.dump(all_results, f, indent=2)
     
-    print(f"结果收集完成，已保存到 {output_path}")
-    print(f"点对点测试: {len(p2p_results)} 个结果")
-    print(f"UDP测试: {len(udp_results)} 个结果")
+    print(f"测试结果已收集并保存到: {output_path}")
+    print(f"共 {len(p2p_results)} 个点对点测试结果和 {len(udp_results)} 个UDP测试结果")
     
     return output_path
+
+def extract_ip_info(filename):
+    """从文件名中提取IP信息"""
+    # 例如：udp_multicast_18.170.227.74_to_34.239.172.73_20250419_224615.json
+    match = re.search(r'udp_multicast_([\d\.]+)_to_([\d\.]+)_', filename)
+    if match:
+        return {
+            'server_ip': match.group(1),
+            'client_ip': match.group(2)
+        }
+    return None
 
 def main():
     parser = argparse.ArgumentParser(description="收集和整理iperf3测试结果")

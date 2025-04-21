@@ -8,6 +8,7 @@ import os
 import sys
 import pandas as pd
 from datetime import datetime
+import re
 
 def load_collected_results(result_file):
     """加载收集的测试结果"""
@@ -50,9 +51,21 @@ def parse_udp_results(udp_tests):
     
     for test in udp_tests:
         if test['status'] == 'success':
+            # Try to extract client region from file name if not explicitly in test data
+            client_region = test.get('client_region', 'unknown')
+            if client_region == 'unknown' and 'file' in test:
+                # Example: udp_multicast_18.170.227.74_to_34.239.172.73_20250419_224615.json
+                file_path = test['file']
+                client_ip = None
+                match = re.search(r'udp_multicast_.*?_to_([\d\.]+)_', file_path)
+                if match:
+                    client_ip = match.group(1)
+                    # To determine region we would need to read instance info or summary file
+                    # For now we'll set to empty for post-processing by format_data.py
+            
             row = {
                 'server_region': test.get('server_region', 'unknown'),
-                'client_region': test.get('client_region', 'unknown'),
+                'client_region': client_region,
                 'protocol': 'UDP',
                 'bandwidth_mbps': test['bits_per_second'] / 1000000,  # 转换为Mbps
                 'transfer_mb': test['bytes'] / 1000000,  # 转换为MB
