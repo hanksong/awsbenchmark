@@ -14,9 +14,9 @@ variable "ami_ids" {
   description = "AMI IDs for each region (Amazon Linux 2)"
   type        = map(string)
   default     = {
-    "ap-northeast-1" = "ami-06ae089b59b645ddc" # tokyo
-    "us-east-1" = "ami-0a38b8c18f189761a" # virginia
-    "eu-west-2" = "ami-02e122a5b090f377d" # london
+    "ap-northeast-1" = "ami-0f6963e3a0e928610" # tokyo
+    "us-east-1" = "ami-065aeacd44e98d9ac" # virginia
+    "eu-west-2" = "ami-0ad4d44e1fe45a341" # london
   }
 }
 

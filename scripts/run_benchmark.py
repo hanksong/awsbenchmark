@@ -206,10 +206,16 @@ def setup_terraform(config):
         
         # Use region names parsed from Terraform output
         for region_name, values in terraform_data["instance_public_ips"]["value"].items():
+            # Check if this is a region with suffix (for multiple resources)
+            base_region_name = region_name
+            if "_" in region_name:
+                # 例如: tokyo_2 -> tokyo
+                base_region_name = region_name.split("_")[0]
+            
             # Find corresponding AWS region code
             aws_region = None
             for code, name in region_friendly_names.items():
-                if name == region_name:
+                if name == base_region_name:
                     aws_region = code
                     break
             
@@ -220,10 +226,16 @@ def setup_terraform(config):
             public_ips = values
             private_ips = terraform_data["instance_private_ips"]["value"][region_name]
             
-            instance_info["instances"][aws_region] = {
-                "public_ips": public_ips,
-                "private_ips": private_ips
-            }
+            # 如果是当前区域的第一个资源，初始化该区域的IP列表
+            if aws_region not in instance_info["instances"]:
+                instance_info["instances"][aws_region] = {
+                    "public_ips": [],
+                    "private_ips": []
+                }
+            
+            # 将当前资源的IP添加到对应区域
+            instance_info["instances"][aws_region]["public_ips"].extend(public_ips)
+            instance_info["instances"][aws_region]["private_ips"].extend(private_ips)
         
         # Save instance info to JSON file
         instance_info_path = os.path.join(PROJECT_ROOT, "data/instance_info.json")
@@ -298,6 +310,9 @@ def run_network_tests(config):
     ip_type_desc = "private IPs" if use_private_ip else "public IPs"
     print(f"\nUsing {ip_type_desc} for network tests")
     
+    # Determine if we should test within regions
+    intra_region_flag = "--intra-region" if config.get('test_intra_region', True) else ""
+    
     # Run latency (ping) tests
     if config.get('run_latency_tests', True):
         print("\nStarting latency tests...")
@@ -307,7 +322,7 @@ def run_network_tests(config):
             f"--ssh-key {ssh_key_path} "
             f"--ping-count {config.get('ping_count', 20)} "
             f"--output-dir {data_dir} "
-            f"--all-regions {ip_type_flag}"
+            f"--all-regions {ip_type_flag} {intra_region_flag}"
         )
         run_command(latency_cmd)
     
@@ -321,7 +336,7 @@ def run_network_tests(config):
             f"--duration {config.get('p2p_duration', 10)} "
             f"--parallel {config.get('p2p_parallel', 1)} "
             f"--output-dir {data_dir} "
-            f"--all-regions {ip_type_flag}"
+            f"--all-regions {ip_type_flag} {intra_region_flag}"
         )
         run_command(p2p_cmd)
     
@@ -344,7 +359,7 @@ def run_network_tests(config):
             f"--bandwidth {config.get('udp_bandwidth', '1G')} "
             f"--duration {config.get('udp_duration', 10)} "
             f"--output-dir {data_dir} "
-            f"--server-region {server_region} {ip_type_flag}"
+            f"--server-region {server_region} {ip_type_flag} {intra_region_flag}"
         )
         run_command(udp_cmd)
     

@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--source-region", help="Source region")
     parser.add_argument("--target-region", help="Target region")
     parser.add_argument("--use-private-ip", action="store_true", help="Use private IPs instead of public IPs for testing")
+    parser.add_argument("--intra-region", action="store_true", help="Also test between instances in the same region")
     
     args = parser.parse_args()
     
@@ -82,23 +83,48 @@ def main():
         regions = list(instance_data["instances"].keys())
         for source_region in regions:
             for target_region in regions:
-                if source_region != target_region:  # Avoid self-testing
-                    # Choose IP type based on args
-                    ip_type = "private_ips" if args.use_private_ip else "public_ips"
-                    source_ip = instance_data["instances"][source_region][ip_type][0]
-                    target_ip = instance_data["instances"][target_region][ip_type][0]
-                    
-                    print(f"\nTesting regions: {source_region} -> {target_region} (using {('private' if args.use_private_ip else 'public')} IPs)")
-                    result_file = run_test(
-                        target_ip, source_ip, args.ssh_key, 
-                        args.duration, args.parallel, args.output_dir
-                    )
-                    if result_file:
-                        results.append({
-                            "source_region": source_region,
-                            "target_region": target_region,
-                            "result_file": result_file
-                        })
+                # 选择IP类型
+                ip_type = "private_ips" if args.use_private_ip else "public_ips"
+                
+                # 获取区域中的所有IP
+                source_ips = instance_data["instances"][source_region][ip_type]
+                target_ips = instance_data["instances"][target_region][ip_type]
+                
+                # 如果是不同区域，或者是相同区域并且启用了intra-region选项
+                if source_region != target_region or args.intra_region:
+                    # 如果是相同区域，测试所有实例对之间的连接
+                    if source_region == target_region and len(source_ips) > 1:
+                        for i, s_ip in enumerate(source_ips):
+                            for j, t_ip in enumerate(target_ips):
+                                # 避免自己测自己
+                                if i != j:
+                                    print(f"\nTesting P2P within {source_region}: Instance {i+1} -> Instance {j+1} (using {('private' if args.use_private_ip else 'public')} IPs)")
+                                    result_file = run_test(
+                                        t_ip, s_ip, args.ssh_key, 
+                                        args.duration, args.parallel, args.output_dir
+                                    )
+                                    if result_file:
+                                        results.append({
+                                            "source_region": f"{source_region}_instance{i+1}",
+                                            "target_region": f"{target_region}_instance{j+1}",
+                                            "result_file": result_file
+                                        })
+                    # 如果是不同区域，测试第一个实例之间的连接
+                    else:
+                        source_ip = source_ips[0]
+                        target_ip = target_ips[0]
+                        
+                        print(f"\nTesting regions: {source_region} -> {target_region} (using {('private' if args.use_private_ip else 'public')} IPs)")
+                        result_file = run_test(
+                            target_ip, source_ip, args.ssh_key, 
+                            args.duration, args.parallel, args.output_dir
+                        )
+                        if result_file:
+                            results.append({
+                                "source_region": source_region,
+                                "target_region": target_region,
+                                "result_file": result_file
+                            })
     elif args.source_region and args.target_region:
         # Test specific region combination
         if args.source_region not in instance_data["instances"]:
@@ -110,20 +136,42 @@ def main():
             
         # Choose IP type based on args
         ip_type = "private_ips" if args.use_private_ip else "public_ips"
-        source_ip = instance_data["instances"][args.source_region][ip_type][0]
-        target_ip = instance_data["instances"][args.target_region][ip_type][0]
         
-        print(f"\nTesting regions: {args.source_region} -> {args.target_region} (using {('private' if args.use_private_ip else 'public')} IPs)")
-        result_file = run_test(
-            target_ip, source_ip, args.ssh_key, 
-            args.duration, args.parallel, args.output_dir
-        )
-        if result_file:
-            results.append({
-                "source_region": args.source_region,
-                "target_region": args.target_region,
-                "result_file": result_file
-            })
+        # 如果是相同区域，并且有多个实例
+        if args.source_region == args.target_region and len(instance_data["instances"][args.source_region][ip_type]) > 1 and args.intra_region:
+            source_ips = instance_data["instances"][args.source_region][ip_type]
+            target_ips = instance_data["instances"][args.target_region][ip_type]
+            
+            for i, s_ip in enumerate(source_ips):
+                for j, t_ip in enumerate(target_ips):
+                    # 避免自己测自己
+                    if i != j:
+                        print(f"\nTesting P2P within {args.source_region}: Instance {i+1} -> Instance {j+1} (using {('private' if args.use_private_ip else 'public')} IPs)")
+                        result_file = run_test(
+                            t_ip, s_ip, args.ssh_key, 
+                            args.duration, args.parallel, args.output_dir
+                        )
+                        if result_file:
+                            results.append({
+                                "source_region": f"{args.source_region}_instance{i+1}",
+                                "target_region": f"{args.target_region}_instance{j+1}",
+                                "result_file": result_file
+                            })
+        else:
+            source_ip = instance_data["instances"][args.source_region][ip_type][0]
+            target_ip = instance_data["instances"][args.target_region][ip_type][0]
+            
+            print(f"\nTesting regions: {args.source_region} -> {args.target_region} (using {('private' if args.use_private_ip else 'public')} IPs)")
+            result_file = run_test(
+                target_ip, source_ip, args.ssh_key, 
+                args.duration, args.parallel, args.output_dir
+            )
+            if result_file:
+                results.append({
+                    "source_region": args.source_region,
+                    "target_region": args.target_region,
+                    "result_file": result_file
+                })
     else:
         print("Error: Must specify either --all-regions or both --source-region and --target-region")
         sys.exit(1)
