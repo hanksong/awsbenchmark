@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import re
+import glob
 
 def load_csv_data(csv_file):
     """Load test result data in CSV format"""
@@ -52,22 +53,43 @@ def format_udp_data(udp_df):
         print("Warning: No UDP test data to format")
         return None, None
     
+    # Try to load the most recent UDP summary file to get IP-to-region mapping
+    data_dir = os.path.dirname(udp_df.iloc[0]['file'])
+    summary_files = glob.glob(os.path.join(data_dir, 'udp_multicast_summary_*.json'))
+    ip_to_region_map = {}
+    
+    if summary_files:
+        # Sort by name to get the most recent
+        latest_summary = sorted(summary_files)[-1]
+        try:
+            with open(latest_summary, 'r') as f:
+                summary = json.load(f)
+                # Create mapping of IP to region
+                if 'client_regions' in summary and len(summary['client_regions']) > 0:
+                    for i, result in enumerate(summary.get('results', [])):
+                        if i < len(summary.get('client_regions', [])):
+                            ip_to_region_map[result['client_ip']] = summary['client_regions'][i]
+        except Exception as e:
+            print(f"Warning: Error loading UDP summary file: {e}")
+    
     # Fix null client_region values by extracting from file path
     for idx, row in udp_df.iterrows():
-        if pd.isnull(row['client_region']):
+        if pd.isnull(row['client_region']) or row['client_region'] == 'unknown':
             file_path = row['file']
-            # Extract client region from filename
-            # Example: udp_multicast_13.230.33.44_to_18.134.96.193_20250413_211359.json
-            # We need to map IP to region using instance_info or extract from file content
+            # Extract client IP from filename
             match = re.search(r'udp_multicast_.*?_to_([\d\.]+)_', file_path)
             if match:
                 client_ip = match.group(1)
-                # Map IP to region - here we'll use a simple approach
-                # You may need to refine this based on your instance info
-                if '18.134.96.193' in client_ip:
+                # First try to use our IP-to-region map
+                if client_ip in ip_to_region_map:
+                    udp_df.at[idx, 'client_region'] = ip_to_region_map[client_ip]
+                # Fall back to hardcoded mappings if needed
+                elif '18.170.227.74' in client_ip:
                     udp_df.at[idx, 'client_region'] = 'eu-west-2'
-                elif '3.106.203.254' in client_ip:
-                    udp_df.at[idx, 'client_region'] = 'ap-southeast-2'
+                elif '52.195.188.216' in client_ip:
+                    udp_df.at[idx, 'client_region'] = 'ap-northeast-1'
+                elif '34.239.172.73' in client_ip:
+                    udp_df.at[idx, 'client_region'] = 'us-east-1'
                 else:
                     # Default fallback - use a descriptive name
                     udp_df.at[idx, 'client_region'] = 'unknown-region'
@@ -119,6 +141,7 @@ def main():
     parser = argparse.ArgumentParser(description="Format iperf3 test result data for visualization")
     parser.add_argument("--p2p-csv", help="Point-to-point test results CSV file")
     parser.add_argument("--udp-csv", help="UDP test results CSV file")
+    parser.add_argument("--latency-csv", help="Latency test results CSV file")
     parser.add_argument("--output-dir", default="../data", help="Output directory")
     
     args = parser.parse_args()
@@ -137,6 +160,12 @@ def main():
     if args.udp_csv:
         udp_df = load_csv_data(args.udp_csv)
         print(f"Loaded {len(udp_df)} UDP test data entries")
+    
+    # Load latency test data
+    latency_df = None
+    if args.latency_csv:
+        latency_df = load_csv_data(args.latency_csv)
+        print(f"Loaded {len(latency_df)} latency test data entries")
     
     # Format point-to-point test data
     formatted_data = {
@@ -193,12 +222,56 @@ def main():
         if udp_jitter_hist:
             formatted_data['udp_jitter_histogram'] = udp_jitter_hist
     
+    # Format latency test data
+    if latency_df is not None and not latency_df.empty:
+        # Create latency matrix
+        latency_matrix = format_latency_data(latency_df)
+        if latency_matrix is not None:
+            formatted_data['latency_matrix'] = latency_matrix.to_dict()
+            
+            # Save as CSV for visualization
+            matrix_csv = os.path.join(args.output_dir, f"latency_matrix_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+            latency_matrix.to_csv(matrix_csv)
+            print(f"Latency matrix saved to {matrix_csv}")
+        
+        # Latency histogram data
+        latency_hist = prepare_histogram_data(latency_df, 'avg_latency_ms', bins=15)
+        if latency_hist:
+            formatted_data['latency_histogram'] = latency_hist
+    
     # Save formatted data
     formatted_file = os.path.join(args.output_dir, f"formatted_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
     with open(formatted_file, 'w') as f:
         json.dump(formatted_data, f, indent=2)
     
     print(f"Formatted data saved to {formatted_file}")
+
+def format_latency_data(latency_df):
+    """Format latency test data, generate inter-region latency matrix"""
+    if latency_df is None or latency_df.empty:
+        print("Warning: No latency test data to format")
+        return None
+    
+    # Get all regions
+    source_regions = latency_df['source_region'].unique()
+    target_regions = latency_df['target_region'].unique()
+    all_regions = np.unique(np.concatenate([source_regions, target_regions]))
+    
+    # Create inter-region latency matrix
+    latency_matrix = pd.DataFrame(index=all_regions, columns=all_regions)
+    
+    # Fill the matrix
+    for _, row in latency_df.iterrows():
+        source = row['source_region']
+        target = row['target_region']
+        latency = row['avg_latency_ms']
+        latency_matrix.loc[source, target] = latency
+    
+    # Set diagonal to NaN (tests within the same region)
+    for region in all_regions:
+        latency_matrix.loc[region, region] = np.nan
+    
+    return latency_matrix
 
 if __name__ == "__main__":
     main()

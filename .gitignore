@@ -25,10 +25,10 @@ var/
 .installed.cfg
 *.egg
 venv/
-.env
-.png
-.html
-
+*.env
+*.png
+*.html
+*.json
 # Terraform related
 **/.terraform/*
 terraform/.terraform/

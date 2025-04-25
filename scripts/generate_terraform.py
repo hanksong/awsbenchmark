@@ -58,13 +58,13 @@ FALLBACK_AMI_IDS = {
 }
 
 def get_latest_ami_ids(regions):
-    """获取指定区域最新的Amazon Linux 2 AMI ID"""
-    print("获取最新的Amazon Linux 2 AMI ID...")
+    """get the latest amazon linux 2 ami id for the specified regions"""
+    print("getting the latest amazon linux 2 ami id...")
     ami_ids = {}
     
     for region in regions:
         try:
-            # 尝试使用AWS CLI获取最新的AMI ID
+            # try to get the latest ami id using aws cli
             cmd = f"aws ec2 describe-images --region {region} --owners amazon " + \
                   "--filters \"Name=name,Values=amzn2-ami-hvm-2.*-x86_64-gp2\" \"Name=state,Values=available\" " + \
                   "--query \"sort_by(Images, &CreationDate)[-1].ImageId\" --output text"
@@ -74,15 +74,15 @@ def get_latest_ami_ids(regions):
             
             if ami_id:
                 ami_ids[region] = ami_id
-                print(f"区域 {region}: 找到最新的AMI ID - {ami_id}")
+                print(f"region {region}: found the latest ami id - {ami_id}")
             else:
                 ami_ids[region] = FALLBACK_AMI_IDS.get(region, "ami-0000000000000000")
-                print(f"区域 {region}: 未找到AMI ID，使用备用值 - {ami_ids[region]}")
+                print(f"region {region}: not found the latest ami id, using the fallback value - {ami_ids[region]}")
         
         except subprocess.CalledProcessError:
-            # 如果AWS CLI调用失败，尝试使用boto3
+            # if the aws cli call fails, try to get the latest ami id using boto3
             try:
-                print(f"AWS CLI失败，尝试使用boto3获取区域 {region} 的AMI ID...")
+                print(f"aws cli call failed, trying to get the latest ami id using boto3 for region {region}...")
                 ec2 = boto3.client('ec2', region_name=region)
                 response = ec2.describe_images(
                     Owners=['amazon'],
@@ -96,15 +96,15 @@ def get_latest_ami_ids(regions):
                 images = sorted(response['Images'], key=lambda x: x['CreationDate'], reverse=True)
                 if images:
                     ami_ids[region] = images[0]['ImageId']
-                    print(f"区域 {region}: 使用boto3找到最新的AMI ID - {ami_ids[region]}")
+                    print(f"region {region}: found the latest ami id using boto3 - {ami_ids[region]}")
                 else:
                     ami_ids[region] = FALLBACK_AMI_IDS.get(region, "ami-0000000000000000")
-                    print(f"区域 {region}: 未找到AMI ID，使用备用值 - {ami_ids[region]}")
+                    print(f"region {region}: not found the latest ami id, using the fallback value - {ami_ids[region]}")
             
             except (ClientError, Exception) as e:
-                # 如果两种方法都失败，使用备用的AMI ID
+                # if both methods fail, use the fallback ami id
                 ami_ids[region] = FALLBACK_AMI_IDS.get(region, "ami-0000000000000000")
-                print(f"区域 {region}: 无法获取AMI ID ({str(e)})，使用备用值 - {ami_ids[region]}")
+                print(f"region {region}: failed to get the latest ami id ({str(e)}), using the fallback value - {ami_ids[region]}")
     
     return ami_ids
 
@@ -112,7 +112,7 @@ def get_region_name(region_code):
     """Get a human-readable name for a region code"""
     return REGION_NAMES.get(region_code, region_code.replace("-", "_"))
 
-def generate_main_tf(regions, output_file):
+def generate_main_tf(regions, output_file, region_instance_counts):
     """Generate main.tf file with resources for specified regions"""
     template = """# Auto-generated main.tf from config.json
 # DO NOT EDIT MANUALLY
@@ -123,11 +123,14 @@ def generate_main_tf(regions, output_file):
     resources = []
     
     # Generate resources for each region
-    for region in regions:
+    for i, region in enumerate(regions):
         region_name = get_region_name(region)
+        # 处理重复区域，为资源名添加索引
+        region_count = regions[:i+1].count(region)
+        resource_suffix = "" if region_count == 1 else f"_{region_count}"
         
-        vpc_module = f"""# Create resources for {region_name} region
-module "vpc_{region_name}" {{
+        vpc_module = f"""# Create resources for {region_name} region{f" #{region_count}" if region_count > 1 else ""}
+module "vpc_{region_name}{resource_suffix}" {{
   source = "./modules/vpc"
   
   providers = {{
@@ -140,18 +143,18 @@ module "vpc_{region_name}" {{
   project_tags      = var.project_tags
 }}
 
-module "security_group_{region_name}" {{
+module "security_group_{region_name}{resource_suffix}" {{
   source = "./modules/security_group"
   
   providers = {{
     aws = aws.{region}
   }}
   
-  vpc_id       = module.vpc_{region_name}.vpc_id
+  vpc_id       = module.vpc_{region_name}{resource_suffix}.vpc_id
   project_tags = var.project_tags
 }}
 
-module "ec2_instance_{region_name}" {{
+module "ec2_instance_{region_name}{resource_suffix}" {{
   source = "./modules/ec2"
   
   providers = {{
@@ -162,9 +165,9 @@ module "ec2_instance_{region_name}" {{
   instance_type     = var.instance_type
   ami_id            = var.ami_ids["{region}"]
   key_name          = var.key_name
-  subnet_id         = module.vpc_{region_name}.subnet_id
-  security_group_id = module.security_group_{region_name}.security_group_id
-  instance_count    = var.instance_count
+  subnet_id         = module.vpc_{region_name}{resource_suffix}.subnet_id
+  security_group_id = module.security_group_{region_name}{resource_suffix}.security_group_id
+  instance_count    = {region_instance_counts.get(region, "var.instance_count")}
   project_tags      = var.project_tags
 }}
 """
@@ -248,14 +251,21 @@ output "instance_private_ips" {{
     public_ips = []
     private_ips = []
     
-    # Generate output blocks for each region
-    for region in regions:
+    # Generate outputs for each region
+    unique_regions = []
+    for i, region in enumerate(regions):
         region_name = get_region_name(region)
+        # 处理重复区域
+        region_count = regions[:i+1].count(region)
+        resource_suffix = "" if region_count == 1 else f"_{region_count}"
         
-        vpc_ids.append(f'    "{region_name}" = module.vpc_{region_name}.vpc_id')
-        subnet_ids.append(f'    "{region_name}" = module.vpc_{region_name}.subnet_id')
-        public_ips.append(f'    "{region_name}" = module.ec2_instance_{region_name}.public_ips')
-        private_ips.append(f'    "{region_name}" = module.ec2_instance_{region_name}.private_ips')
+        if region not in unique_regions:
+            unique_regions.append(region)
+        
+        vpc_ids.append(f'    "{region_name}{f"_{region_count}" if region_count > 1 else ""}" = module.vpc_{region_name}{resource_suffix}.vpc_id')
+        subnet_ids.append(f'    "{region_name}{f"_{region_count}" if region_count > 1 else ""}" = module.vpc_{region_name}{resource_suffix}.subnet_id')
+        public_ips.append(f'    "{region_name}{f"_{region_count}" if region_count > 1 else ""}" = module.ec2_instance_{region_name}{resource_suffix}.public_ips')
+        private_ips.append(f'    "{region_name}{f"_{region_count}" if region_count > 1 else ""}" = module.ec2_instance_{region_name}{resource_suffix}.private_ips')
     
     with open(output_file, 'w') as f:
         f.write(template.format(
@@ -265,7 +275,7 @@ output "instance_private_ips" {{
             private_ips="\n".join(private_ips)
         ))
     
-    print(f"Generated {output_file} with {len(regions)} region outputs")
+    print(f"Generated {output_file} with {len(regions)} regions")
 
 def update_variables_tf(regions, output_file, ami_ids):
     """Update variables.tf file to include all required regions"""
@@ -467,13 +477,31 @@ def main():
             print("Error: No AWS regions specified in config.json")
             sys.exit(1)
         
+        # 处理每个区域的实例数量配置
+        region_instance_counts = {}
+        
+        # 检查config.json中是否有region_instance_counts配置
+        if 'region_instance_counts' in config:
+            region_instance_counts = config['region_instance_counts']
+            print(f"Found region-specific instance counts: {region_instance_counts}")
+        else:
+            # 检查是否有重复的区域，如果有，为每个重复区域创建单独的配置
+            region_counts = {}
+            for region in regions:
+                region_counts[region] = region_counts.get(region, 0) + 1
+            
+            duplicate_regions = {region: count for region, count in region_counts.items() if count > 1}
+            if duplicate_regions:
+                print(f"注意：发现重复区域: {duplicate_regions}")
+                print("将自动为每个区域创建实例。如需更精细控制，请在config.json中添加region_instance_counts配置。")
+        
         print(f"Generating Terraform files for {len(regions)} regions: {', '.join(regions)}")
         
         # 获取最新的AMI IDs
         ami_ids = get_latest_ami_ids(regions)
         
         # Generate Terraform files
-        generate_main_tf(regions, os.path.join(terraform_dir, "main.tf"))
+        generate_main_tf(regions, os.path.join(terraform_dir, "main.tf"), region_instance_counts)
         generate_provider_tf(regions, os.path.join(terraform_dir, "provider.tf"))
         generate_outputs_tf(regions, os.path.join(terraform_dir, "outputs.tf"))
         update_variables_tf(regions, os.path.join(terraform_dir, "variables.tf"), ami_ids)

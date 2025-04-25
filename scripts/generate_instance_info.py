@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # generate_instance_info.py
-# 从terraform_output.json生成instance_info.json文件
+# generate instance info from terraform output
 
 import json
 import os
@@ -8,22 +8,22 @@ import sys
 import argparse
 
 def main():
-    parser = argparse.ArgumentParser(description="从Terraform输出生成实例信息文件")
-    parser.add_argument("--terraform-output", default="../terraform_output.json", help="Terraform输出JSON文件路径")
-    parser.add_argument("--output", default="../data/instance_info.json", help="输出的实例信息JSON文件路径")
+    parser = argparse.ArgumentParser(description="generate instance info from terraform output")
+    parser.add_argument("--terraform-output", default="../terraform_output.json", help="Terraform output json file")
+    parser.add_argument("--output", default="../data/instance_info.json", help="output instance info json file")
     
     args = parser.parse_args()
     
-    # 确保输出目录存在
+    # make sure the output directory exists 
     output_dir = os.path.dirname(args.output)
     os.makedirs(output_dir, exist_ok=True)
     
     try:
-        # 读取Terraform输出
+        # read terraform output
         with open(args.terraform_output, 'r') as f:
             terraform_data = json.load(f)
         
-        # 构造实例信息数据结构
+        # construct instance info data structure
         instance_info = {
             "instances": {}
         }
@@ -43,7 +43,7 @@ def main():
             public_ips = terraform_data["instance_public_ips"]["value"][region]
             private_ips = terraform_data["instance_private_ips"]["value"][region]
             
-            # 检查是否有非空公网IP
+            # check if there is any non-empty public ip
             for ip in public_ips:
                 if ip and ip != "":
                     public_ips_empty = False
@@ -54,21 +54,21 @@ def main():
                 "private_ips": private_ips
             }
         
-        # 保存实例信息到JSON文件
+        # save instance info to json file
         with open(args.output, 'w') as f:
             json.dump(instance_info, f, indent=2)
         
-        print(f"实例信息已保存到: {args.output}")
+        print(f"instance info saved to: {args.output}")
         
         if public_ips_empty:
-            print("\n警告: 所有公网IP都为空！请检查Terraform配置确保已分配公网IP。")
-            print("您可能需要执行以下步骤:")
-            print("1. 确认VPC和子网配置中已启用自动分配公网IP")
-            print("2. 确认EC2实例配置中的associate_public_ip_address=true")
-            print("3. 重新应用Terraform配置: cd terraform && terraform apply")
+            print("\nwarning: all public ips are empty! please check the terraform config to ensure public ips are assigned.")
+            print("you may need to do the following steps:")
+            print("1. check if the vpc and subnet config has enabled auto assign public ip")
+            print("2. check if the ec2 instance config has associate_public_ip_address=true")
+            print("3. reapply the terraform config: cd terraform && terraform apply")
             
     except Exception as e:
-        print(f"错误: {e}")
+        print(f"error: {e}")
         return 1
     
     return 0

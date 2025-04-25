@@ -206,10 +206,16 @@ def setup_terraform(config):
         
         # Use region names parsed from Terraform output
         for region_name, values in terraform_data["instance_public_ips"]["value"].items():
+            # Check if this is a region with suffix (for multiple resources)
+            base_region_name = region_name
+            if "_" in region_name:
+                # 例如: tokyo_2 -> tokyo
+                base_region_name = region_name.split("_")[0]
+            
             # Find corresponding AWS region code
             aws_region = None
             for code, name in region_friendly_names.items():
-                if name == region_name:
+                if name == base_region_name:
                     aws_region = code
                     break
             
@@ -220,10 +226,16 @@ def setup_terraform(config):
             public_ips = values
             private_ips = terraform_data["instance_private_ips"]["value"][region_name]
             
-            instance_info["instances"][aws_region] = {
-                "public_ips": public_ips,
-                "private_ips": private_ips
-            }
+            # 如果是当前区域的第一个资源，初始化该区域的IP列表
+            if aws_region not in instance_info["instances"]:
+                instance_info["instances"][aws_region] = {
+                    "public_ips": [],
+                    "private_ips": []
+                }
+            
+            # 将当前资源的IP添加到对应区域
+            instance_info["instances"][aws_region]["public_ips"].extend(public_ips)
+            instance_info["instances"][aws_region]["private_ips"].extend(private_ips)
         
         # Save instance info to JSON file
         instance_info_path = os.path.join(PROJECT_ROOT, "data/instance_info.json")
@@ -298,6 +310,22 @@ def run_network_tests(config):
     ip_type_desc = "private IPs" if use_private_ip else "public IPs"
     print(f"\nUsing {ip_type_desc} for network tests")
     
+    # Determine if we should test within regions
+    intra_region_flag = "--intra-region" if config.get('test_intra_region', True) else ""
+    
+    # Run latency (ping) tests
+    if config.get('run_latency_tests', True):
+        print("\nStarting latency tests...")
+        latency_cmd = (
+            f"python3 {scripts_dir}/latency_test.py "
+            f"--instance-info {instance_info_path} "
+            f"--ssh-key {ssh_key_path} "
+            f"--ping-count {config.get('ping_count', 20)} "
+            f"--output-dir {data_dir} "
+            f"--all-regions {ip_type_flag} {intra_region_flag}"
+        )
+        run_command(latency_cmd)
+    
     # Run point-to-point tests
     if config.get('run_p2p_tests', True):
         print("\nStarting point-to-point network tests...")
@@ -308,7 +336,7 @@ def run_network_tests(config):
             f"--duration {config.get('p2p_duration', 10)} "
             f"--parallel {config.get('p2p_parallel', 1)} "
             f"--output-dir {data_dir} "
-            f"--all-regions {ip_type_flag}"
+            f"--all-regions {ip_type_flag} {intra_region_flag}"
         )
         run_command(p2p_cmd)
     
@@ -331,7 +359,7 @@ def run_network_tests(config):
             f"--bandwidth {config.get('udp_bandwidth', '1G')} "
             f"--duration {config.get('udp_duration', 10)} "
             f"--output-dir {data_dir} "
-            f"--server-region {server_region} {ip_type_flag}"
+            f"--server-region {server_region} {ip_type_flag} {intra_region_flag}"
         )
         run_command(udp_cmd)
     
@@ -412,8 +440,9 @@ def generate_visualizations(result_files, config):
     print("\nGenerating visualization charts...")
     visualization_dir = os.path.join(PROJECT_ROOT, "visualization")
     
-    # Current timestamp
+    # Current timestamp for log directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    vis_log_dir = f"vis_log_{timestamp}"
     
     # Ensure we have the latest results file references
     data_dir = os.path.join(PROJECT_ROOT, "data")
@@ -441,6 +470,13 @@ def generate_visualizations(result_files, config):
             result_files['udp_csv'] = os.path.join(data_dir, latest_udp)
             print(f"Using latest UDP results file: {result_files['udp_csv']}")
     
+    if not result_files.get('latency_csv'):
+        latency_files = [f for f in os.listdir(data_dir) if f.startswith('latency_results_') and f.endswith('.csv')]
+        if latency_files:
+            latest_latency = sorted(latency_files)[-1]
+            result_files['latency_csv'] = os.path.join(data_dir, latest_latency)
+            print(f"Using latest latency results file: {result_files['latency_csv']}")
+    
     # Find latest matrix files
     p2p_matrix_files = [f for f in os.listdir(data_dir) if f.startswith('p2p_bandwidth_matrix_') and f.endswith('.csv')]
     p2p_matrix = None
@@ -460,6 +496,12 @@ def generate_visualizations(result_files, config):
         udp_loss_matrix = os.path.join(data_dir, sorted(udp_loss_matrix_files)[-1])
         print(f"Using UDP loss matrix: {udp_loss_matrix}")
     
+    latency_matrix_files = [f for f in os.listdir(data_dir) if f.startswith('latency_matrix_') and f.endswith('.csv')]
+    latency_matrix = None
+    if latency_matrix_files:
+        latency_matrix = os.path.join(data_dir, sorted(latency_matrix_files)[-1])
+        print(f"Using latency matrix: {latency_matrix}")
+    
     # Generate histograms and heatmaps
     hist_cmd = f"python3 {visualization_dir}/generate_histograms.py"
     
@@ -469,6 +511,9 @@ def generate_visualizations(result_files, config):
     if result_files.get('udp_csv'):
         hist_cmd += f" --udp-csv {result_files['udp_csv']}"
     
+    if result_files.get('latency_csv'):
+        hist_cmd += f" --latency-csv {result_files['latency_csv']}"
+    
     if p2p_matrix:
         hist_cmd += f" --p2p-matrix {p2p_matrix}"
     
@@ -477,6 +522,15 @@ def generate_visualizations(result_files, config):
     
     if udp_loss_matrix:
         hist_cmd += f" --udp-loss-matrix {udp_loss_matrix}"
+    
+    if latency_matrix:
+        hist_cmd += f" --latency-matrix {latency_matrix}"
+    
+    # Add generate interval analysis parameter
+    hist_cmd += " --generate-intervals"
+    
+    # Add log subdirectory parameter
+    hist_cmd += f" --log-subdir {vis_log_dir}"
     
     hist_cmd += f" --output-dir {os.path.join(PROJECT_ROOT, 'visualization')}"
     
@@ -497,11 +551,11 @@ def generate_visualizations(result_files, config):
     
     # If no image files were found via output parsing, try to find them directly
     if not image_files:
-        print("Searching for visualization files in visualization directory...")
-        vis_files = glob.glob(os.path.join(PROJECT_ROOT, 'visualization', '*.png'))
+        print("Searching for visualization files in log directory...")
+        vis_files = glob.glob(os.path.join(visualization_dir, vis_log_dir, '*.png'))
         # Sort by timestamp to get the latest ones
         vis_files.sort(key=lambda f: os.path.getmtime(f), reverse=True)
-        for file in vis_files[:8]:  # Take only the most recent few files
+        for file in vis_files:
             image_files.append(file)
             print(f"Found visualization file: {file}")
     
@@ -519,8 +573,14 @@ def generate_visualizations(result_files, config):
         if result_files.get('udp_csv') and os.path.exists(result_files['udp_csv']):
             report_cmd += f" --udp-csv {result_files['udp_csv']}"
         
+        if result_files.get('latency_csv') and os.path.exists(result_files['latency_csv']):
+            report_cmd += f" --latency-csv {result_files['latency_csv']}"
+        
         if image_files:
             report_cmd += f" --images {' '.join(image_files)}"
+        
+        # Add log subdirectory parameter
+        report_cmd += f" --log-subdir {vis_log_dir}"
         
         report_cmd += f" --output-dir {os.path.join(PROJECT_ROOT, 'visualization')}"
         
@@ -539,14 +599,21 @@ def generate_visualizations(result_files, config):
                     break
         
         if report_file and os.path.exists(report_file):
-            print(f"\nTest report generated: {report_file}")
+            # Create a link to the report in the project root for easy access
+            root_report = os.path.join(PROJECT_ROOT, f"network_benchmark_report_latest.html")
+            try:
+                # If it's a symlink, remove it first
+                if os.path.islink(root_report):
+                    os.unlink(root_report)
+                # Create a symbolic link
+                os.symlink(report_file, root_report)
+                print(f"Created link to report at: {root_report}")
+            except Exception as e:
+                # If symlink fails, just copy the file
+                shutil.copy2(report_file, root_report)
+                print(f"Report copied to: {root_report}")
             
-            # Copy report to project root for easy access
-            root_report = os.path.join(PROJECT_ROOT, os.path.basename(report_file))
-            shutil.copy2(report_file, root_report)
-            print(f"Report copied to: {root_report}")
-            
-            return root_report
+            return report_file
         else:
             print(f"Warning: Could not find generated report file in output: {output}")
     else:
