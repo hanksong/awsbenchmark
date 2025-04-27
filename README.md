@@ -27,13 +27,17 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
 ## Recent Improvements
 
 ### Latency Testing
+
 Added comprehensive latency testing capabilities that measure Round Trip Time (RTT) between EC2 instances:
+
 - Implemented ping-based testing with customizable packet count and interval settings
 - Added latency matrix generation for visualizing the RTT patterns between instances
 - Integrated latency data into the HTML report generation
 
 ### File Organization
+
 Improved organization of visualization outputs:
+
 - All generated visualizations and reports are now stored in timestamped directories (`vis_log_YYYYMMDD_HHMMSS`)
 - A symlink to the latest report is created in the project root for easy access
 - Reduced file clutter in the main visualization directory
@@ -72,11 +76,12 @@ python3 visualization/generate_report.py --summary-json data/results_summary_*.j
 ## Configuration
 
 The benchmark suite uses JSON configuration files to specify:
+
 - EC2 instance details (IPs, instance types, regions)
 - Test parameters (duration, parallel streams, etc.)
 - Visualization options
 
-Sample configuration files are provided in the `config/` directory.
+Sample configuration files are provided in the `terraform/config.json` directory.
 
 ## Requirements
 
@@ -86,4 +91,4 @@ Sample configuration files are provided in the `config/` directory.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
