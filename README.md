@@ -2,6 +2,13 @@
 
 A comprehensive suite for benchmarking network performance between Amazon EC2 instances.
 
+## Team Members
+
+- Hanliang Song (hs67)
+- Tim Rolsh (rolshud2)
+- Austin Belman (abelma2)
+- David Mun (davidm16)
+
 ## Features
 
 - **Point-to-Point TCP Bandwidth Testing** - Measures bandwidth between EC2 instances using iperf3 in TCP mode
