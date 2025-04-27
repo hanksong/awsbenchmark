@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 从AWS获取实例信息并生成instance_info.json文件
+# Get instance information from AWS and generate instance_info.json file
 
 import os
 import json
@@ -8,15 +8,15 @@ import sys
 import boto3
 from botocore.exceptions import ClientError
 
-# 项目根目录
+# Project root directory
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# 区域列表
+# List of regions
 REGIONS = ["ap-northeast-1", "ap-southeast-2", "eu-west-2"]
-REGION_NAMES = {"ap-northeast-1": "东京", "ap-southeast-2": "悉尼", "eu-west-2": "伦敦"}
+REGION_NAMES = {"ap-northeast-1": "Tokyo", "ap-southeast-2": "Sydney", "eu-west-2": "London"}
 
 def print_color(text, color):
-    """打印彩色文本"""
+    """Print colored text"""
     colors = {
         "green": "\033[0;32m",
         "yellow": "\033[1;33m",
@@ -26,18 +26,18 @@ def print_color(text, color):
     print(f"{colors.get(color, colors['reset'])}{text}{colors['reset']}")
 
 def get_instance_info():
-    """从AWS获取实例信息"""
+    """Get instance information from AWS"""
     instance_info = {"instances": {}}
     
     for region in REGIONS:
         region_name = REGION_NAMES.get(region, region)
-        print_color(f"\n获取{region_name}区域 ({region}) 的实例信息...", "yellow")
+        print_color(f"\nGetting instance information for {region_name} region ({region})...", "yellow")
         
         try:
-            # 创建EC2客户端
+            # Create EC2 client
             ec2 = boto3.client('ec2', region_name=region)
             
-            # 获取有Project=aws-network-benchmark标签的实例
+            # Get instances with Project=aws-network-benchmark tag
             response = ec2.describe_instances(
                 Filters=[
                     {
@@ -51,7 +51,7 @@ def get_instance_info():
                 ]
             )
             
-            # 提取实例信息
+            # Extract instance information
             public_ips = []
             private_ips = []
             instance_ids = []
@@ -68,15 +68,15 @@ def get_instance_info():
                         private_ips.append(instance['PrivateIpAddress'])
             
             if not instance_ids:
-                print_color(f"在{region_name}区域没有找到实例", "yellow")
+                print_color(f"No instances found in {region_name} region", "yellow")
                 continue
                 
-            print_color(f"在{region_name}区域找到 {len(instance_ids)} 个实例:", "green")
+            print_color(f"Found {len(instance_ids)} instances in {region_name} region:", "green")
             for i, instance_id in enumerate(instance_ids):
-                public_ip = public_ips[i] if i < len(public_ips) else "无公网IP"
+                public_ip = public_ips[i] if i < len(public_ips) else "No public IP"
                 print(f" - {instance_id} ({public_ip})")
             
-            # 添加到实例信息
+            # Add to instance information
             instance_info["instances"][region] = {
                 "public_ips": public_ips,
                 "private_ips": private_ips,
@@ -84,40 +84,40 @@ def get_instance_info():
             }
             
         except ClientError as e:
-            print_color(f"获取{region_name}区域实例时出错: {e}", "red")
+            print_color(f"Error getting instances in {region_name} region: {e}", "red")
     
     return instance_info
 
 def save_instance_info(instance_info):
-    """保存实例信息到文件"""
-    # 确保data目录存在
+    """Save instance information to file"""
+    # Ensure data directory exists
     data_dir = os.path.join(PROJECT_ROOT, "data")
     os.makedirs(data_dir, exist_ok=True)
     
-    # 保存到文件
+    # Save to file
     instance_info_path = os.path.join(data_dir, "instance_info.json")
     with open(instance_info_path, 'w') as f:
         json.dump(instance_info, f, indent=2)
     
-    print_color(f"\n实例信息已保存到: {instance_info_path}", "green")
+    print_color(f"\nInstance information saved to: {instance_info_path}", "green")
     return instance_info_path
 
 def main():
-    """主函数"""
-    print_color("开始获取实例信息...", "yellow")
+    """Main function"""
+    print_color("Starting to get instance information...", "yellow")
     
-    # 检查AWS凭证
+    # Check AWS credentials
     try:
         boto3.client('sts').get_caller_identity()
     except Exception as e:
-        print_color(f"AWS凭证无效: {e}", "red")
-        print("请运行 'aws configure' 配置您的AWS凭证")
+        print_color(f"Invalid AWS credentials: {e}", "red")
+        print("Please run 'aws configure' to set up your AWS credentials")
         return 1
     
-    # 获取实例信息
+    # Get instance information
     instance_info = get_instance_info()
     
-    # 检查是否获取到任何实例
+    # Check if any instances were found
     any_instances = False
     for region, info in instance_info["instances"].items():
         if info.get("instance_ids"):
@@ -125,13 +125,13 @@ def main():
             break
     
     if not any_instances:
-        print_color("错误: 未在任何区域找到实例", "red")
+        print_color("Error: No instances found in any region", "red")
         return 1
     
-    # 保存实例信息
+    # Save instance information
     save_instance_info(instance_info)
     
-    print_color("实例信息获取完成!", "green")
+    print_color("Instance information retrieval complete!", "green")
     return 0
 
 if __name__ == "__main__":

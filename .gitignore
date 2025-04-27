@@ -3,8 +3,8 @@
 **/.DS_Store
 Thumbs.db
 data/
-*.png
-*.html
+
+
 # Python related
 __pycache__/
 *.py[cod]
@@ -32,6 +32,7 @@ venv/
 *.png
 *.html
 *.json
+
 # Terraform related
 **/.terraform/*
 terraform/.terraform/

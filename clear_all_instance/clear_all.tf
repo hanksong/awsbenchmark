@@ -8,7 +8,7 @@ terraform {
   }
 }
 
-# 配置提供者
+# Configure providers
 provider "aws" {
   alias  = "ap-northeast-1"
   region = "ap-northeast-1"
@@ -24,7 +24,7 @@ provider "aws" {
   region = "eu-west-2"
 }
 
-# 使用数据源获取所有实例
+# Use data source to get all instances
 data "aws_instances" "tokyo" {
   provider = aws.ap-northeast-1
   instance_tags = {
@@ -46,7 +46,7 @@ data "aws_instances" "london" {
   }
 }
 
-# 重启东京区域的实例
+# Reboot Tokyo region instances
 resource "null_resource" "reboot_tokyo" {
   count = length(data.aws_instances.tokyo.ids)
 
@@ -55,7 +55,7 @@ resource "null_resource" "reboot_tokyo" {
   }
 }
 
-# 重启悉尼区域的实例
+# Reboot Sydney region instances
 resource "null_resource" "reboot_sydney" {
   count = length(data.aws_instances.sydney.ids)
 
@@ -64,7 +64,7 @@ resource "null_resource" "reboot_sydney" {
   }
 }
 
-# 重启伦敦区域的实例
+# Reboot London region instances
 resource "null_resource" "reboot_london" {
   count = length(data.aws_instances.london.ids)
 
@@ -73,7 +73,7 @@ resource "null_resource" "reboot_london" {
   }
 }
 
-# 输出所有重启的实例ID
+# Output all rebooted instance IDs
 output "rebooted_instances" {
   value = {
     tokyo  = data.aws_instances.tokyo.ids
