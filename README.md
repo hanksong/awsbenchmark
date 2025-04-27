@@ -2,7 +2,15 @@
 
 This project provides an automated tool for network performance benchmarking between EC2 instances in different AWS regions. The tool uses Terraform to automatically deploy EC2 instances, performs network tests using iperf3, and generates visualization reports.
 
-## Features
+# Team Members
+
+- Hanliang Song (hs67)
+  - MS in Financial Engineering 2025' | Quant Developer | Seeking for full-time position starting Dec 2025.
+- Tim Rolsh (rolshud2)
+- Austin Belman (abelma2)
+- David Mun (davidm16)
+
+# Features
 
 - **Multi-region Deployment**: Automatically deploy EC2 instances in multiple AWS regions using Terraform
 - **Network Performance Testing**: Conduct point-to-point and one-to-many UDP tests using iperf3
@@ -89,10 +97,18 @@ aws-network-benchmark/
    * Set `use_private_ip` to `false` (default) to use public IPs for testing (for general cross-region scenarios)
 5. Run the benchmark:
 
-   ```
-   python scripts/run_benchmark.py
-   ```
-6. View the generated reports (located in the project root and `visualization/` directory).
+```bash
+python3 scripts/run_benchmark.py [options]
+```
+
+| Option                                                                                        | Description                                                                       |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `--config PATH`                                                                             | Specify the path to the configuration file (default:`../terraform/config.json`) |
+| `--skip-terraform`                                                                          | Skip the Terraform deployment step                                                |
+| `--skip-install`                                                                            | Skip the iperf3 installation step                                                 |
+| `--skip-tests`                                                                              | Skip the network test step                                                        |
+| `--cleanup`                                                                                 | Clean up AWS resources after testing                                              |
+| 6. View the generated reports (located in the project root and `visualization/` directory). |                                                                                   |
 
 ## Detailed Documentation
 
@@ -107,7 +123,6 @@ MIT
 
 Issues and pull requests are welcome.
 
-
 ## Troubleshooting
 
 ### cannot automatically import ssh key to aws, please run the following command to import manually:
@@ -115,5 +130,3 @@ Issues and pull requests are welcome.
 ```
 aws ec2 import-key-pair --region us-east-1 --key-name aws-network-benchmark --public-key-material fileb://$HOME/.ssh/aws-network-benchmark.pub
 ```
-
-### 

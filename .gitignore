@@ -2,7 +2,9 @@
 .DS_Store
 **/.DS_Store
 Thumbs.db
-
+data/
+*.png
+*.html
 # Python related
 __pycache__/
 *.py[cod]
@@ -26,8 +28,6 @@ var/
 *.egg
 venv/
 .env
-.png
-.html
 
 # Terraform related
 **/.terraform/*
