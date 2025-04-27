@@ -28,7 +28,10 @@ var/
 *.egg
 venv/
 .env
-
+*.env
+*.png
+*.html
+*.json
 # Terraform related
 **/.terraform/*
 terraform/.terraform/

@@ -1,0 +1,14 @@
+# Environment definition file for Conda for ease of install
+# To create the environment, run the following command:
+# conda env create -f environment.yml
+name: awsbenchmark
+dependencies:
+    - python=3.10.9
+    - pandas
+    - matplotlib
+    - seaborn
+    - jinja2
+    - numpy
+    - boto3
+    - pip:
+        - types-boto3

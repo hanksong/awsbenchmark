@@ -39,7 +39,7 @@ module "ec2_instance_tokyo" {
   key_name          = var.key_name
   subnet_id         = module.vpc_tokyo.subnet_id
   security_group_id = module.security_group_tokyo.security_group_id
-  instance_count    = var.instance_count
+  instance_count    = 2
   project_tags      = var.project_tags
 }
 

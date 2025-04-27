@@ -4,7 +4,11 @@
   "ssh_key_name": "aws-network-benchmark",
   "create_ssh_key": true,
   "instance_count": 1,
+  "region_instance_counts": {
+    "ap-northeast-1": 2
+  },
   "use_private_ip": false,
+  "test_intra_region": true,
   
   "run_p2p_tests": true,
   "p2p_duration": 10,
