@@ -8,7 +8,13 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
   - MS in Financial Engineering 2025' | Quant Developer | Seeking for full-time position starting Dec 2025.
 - Tim Rolsh (rolshud2)
 - Austin Belman (abelma2)
-- David Mun (davidm16)
+![David Mun](imgs/davidm16.jpeg){width=100}  
+***David Mun***
+
+I am currently a junior studying Computer Engineering at UIUC graduating in Spring 2026. I have previous experience working with low-latency C++ embedded systems at Rivian and I am currently working at DRW as a software engineering intern. I am interested in intersecting my understanding of computer systems with trading, and I am motivated by solving hard problems.
+
+Email: [davidm16@illinois.edu](mailto:davidm16@illinois.edu)  
+LinkedIn: https://www.linkedin.com/in/davidmun910/
 
 # Features
 
