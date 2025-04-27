@@ -42,6 +42,22 @@ Improved organization of visualization outputs:
 - A symlink to the latest report is created in the project root for easy access
 - Reduced file clutter in the main visualization directory
 
+## Setup
+
+- Get the following info from AWS:
+  - Access Key ID
+  - Secret Access Key
+  - Default region name
+  - Default output format
+
+- Install the AWS CLI from this page: [https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- Install Terraform from this page: [https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
+- Configure the AWS CLI with your credentials:
+
+```bash
+aws configure
+```
+
 ## Usage
 
 ### Running the Full Benchmark Suite
