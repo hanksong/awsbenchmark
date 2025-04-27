@@ -53,11 +53,11 @@ Improved organization of visualization outputs:
 ## Setup
 
 - Get the following info from AWS:
+
   - Access Key ID
   - Secret Access Key
   - Default region name
   - Default output format
-
 - Install the AWS CLI from this page: [https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 - Install Terraform from this page: [https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
 - Configure the AWS CLI with your credentials:
@@ -110,9 +110,9 @@ Sample configuration files are provided in the `terraform/config.json` directory
 ## Requirements
 
 - Python 3.6+
-
 - Terraform 0.14+
 - The following Python packages:
+
   - pandas
   - matplotlib
   - seaborn
@@ -159,14 +159,13 @@ Sample configuration files are provided in the `terraform/config.json` directory
 python3 scripts/run_benchmark.py [options]
 ```
 
-| Option                                                                                        | Description                                                                       |
-| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `--config PATH`                                                                             | Specify the path to the configuration file (default:`../terraform/config.json`) |
-| `--skip-terraform`                                                                          | Skip the Terraform deployment step                                                |
-| `--skip-install`                                                                            | Skip the iperf3 installation step                                                 |
-| `--skip-tests`                                                                              | Skip the network test step                                                        |
-| `--cleanup`                                                                                 | Clean up AWS resources after testing                                              |
-| 6. View the generated reports (located in the project root and `visualization/` directory). |                                                                                   |
+| Option               | Description                                                                       |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `--config PATH`    | Specify the path to the configuration file (default:`../terraform/config.json`) |
+| `--skip-terraform` | Skip the Terraform deployment step                                                |
+| `--skip-install`   | Skip the iperf3 installation step                                                 |
+| `--skip-tests`     | Skip the network test step                                                        |
+| `--cleanup`        | Clean up AWS resources after testing                                              |
 
 ## Detailed Documentation
 
@@ -188,7 +187,6 @@ Issues and pull requests are welcome.
 ```
 aws ec2 import-key-pair --region us-east-1 --key-name aws-network-benchmark --public-key-material fileb://$HOME/.ssh/aws-network-benchmark.pub
 ```
-
 
 ## License
 
