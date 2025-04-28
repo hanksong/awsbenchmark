@@ -4,3 +4,5 @@ seaborn
 jinja2
 numpy
 boto3
+streamlit
+watchdog
