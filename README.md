@@ -11,7 +11,14 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
   - LinkedIn: [https://www.linkedin.com/in/tim-rolsh-492088261/](https://www.linkedin.com/in/tim-rolsh-492088261/)
   - GitHub: [https://github.com/timrolsh](https://github.com/timrolsh)
 - Austin Belman (abelma2)
-- David Mun (davidm16)
+
+![David Mun](imgs/davidm16.jpeg){width=100}  
+***David Mun***
+
+I am currently a junior studying Computer Engineering at UIUC graduating in Spring 2026. I have previous experience working with low-latency C++ embedded systems at Rivian and I am currently working at DRW as a software engineering intern. I am interested in intersecting my understanding of computer systems with trading, and I am motivated by solving hard problems.
+
+Email: [davidm16@illinois.edu](mailto:davidm16@illinois.edu)  
+LinkedIn: https://www.linkedin.com/in/davidmun910/
 
 # Features
 
