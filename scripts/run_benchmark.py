@@ -28,17 +28,21 @@ def load_config(config_file):
         config.setdefault("instance_type", "t2.micro")
         config.setdefault("ssh_key_name", "aws-network-benchmark")
         config.setdefault("create_ssh_key", False)
-        config.setdefault("instance_count", 1) # Default instances per region if not specified
-        config.setdefault("region_instance_counts", {}) # Specific counts per region
+        # Default instances per region if not specified
+        config.setdefault("instance_count", 1)
+        # Specific counts per region
+        config.setdefault("region_instance_counts", {})
         config.setdefault("use_private_ip", False)
-        config.setdefault("test_intra_region", False) # Default for latency/p2p intra-region
+        # Default for latency/p2p intra-region
+        config.setdefault("test_intra_region", False)
 
         config.setdefault("run_p2p_tests", False)
         config.setdefault("p2p_duration", 10)
         config.setdefault("p2p_parallel", 1)
 
         config.setdefault("run_udp_tests", False)
-        config.setdefault("udp_server_region", None) # Must be specified if run_udp_tests is true
+        # Must be specified if run_udp_tests is true
+        config.setdefault("udp_server_region", None)
         config.setdefault("udp_bandwidth", "1G")
         config.setdefault("udp_duration", 10)
 
@@ -48,28 +52,33 @@ def load_config(config_file):
             print("Error: 'aws_regions' must be specified in the config file.")
             sys.exit(1)
         if config["run_udp_tests"] and not config.get("udp_server_region"):
-             print("Error: 'udp_server_region' must be specified in the config file when 'run_udp_tests' is true.")
-             sys.exit(1)
+            print(
+                "Error: 'udp_server_region' must be specified in the config file when 'run_udp_tests' is true.")
+            sys.exit(1)
         if config["run_udp_tests"] and config["udp_server_region"] not in config["aws_regions"]:
-             print(f"Error: 'udp_server_region' ({config['udp_server_region']}) must be one of the regions listed in 'aws_regions'.")
-             sys.exit(1)
+            print(
+                f"Error: 'udp_server_region' ({config['udp_server_region']}) must be one of the regions listed in 'aws_regions'.")
+            sys.exit(1)
 
         return config
     except FileNotFoundError:
         print(f"Error: Configuration file '{config_file}' not found.")
         sys.exit(1)
     except json.JSONDecodeError:
-        print(f"Error: Configuration file '{config_file}' contains invalid JSON.")
+        print(
+            f"Error: Configuration file '{config_file}' contains invalid JSON.")
         sys.exit(1)
     except Exception as e:
         print(f"An unexpected error occurred loading the config: {e}")
         sys.exit(1)
 
+
 def run_command(command, cwd=None, check=True):
     """Helper function to run shell commands."""
     print(f"Executing: {' '.join(command)}")
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=check, cwd=cwd)
+        result = subprocess.run(
+            command, capture_output=True, text=True, check=check, cwd=cwd)
         print(result.stdout)
         if result.stderr:
             print("Stderr:", result.stderr)
@@ -84,18 +93,22 @@ def run_command(command, cwd=None, check=True):
         print(f"Error: Command not found: {command[0]}")
         return False
 
+
 def create_ssh_key(key_name, key_dir="../terraform"):
     """Creates an SSH key pair if it doesn't exist."""
     private_key_path = os.path.join(key_dir, key_name)
     public_key_path = f"{private_key_path}.pub"
 
     if not os.path.exists(private_key_path):
-        print(f"SSH key '{key_name}' not found. Creating new key pair in {key_dir}...")
+        print(
+            f"SSH key '{key_name}' not found. Creating new key pair in {key_dir}...")
         os.makedirs(key_dir, exist_ok=True)
         # Create key without passphrase
-        command = ["ssh-keygen", "-t", "rsa", "-b", "2048", "-f", private_key_path, "-N", ""]
+        command = ["ssh-keygen", "-t", "rsa", "-b",
+                   "2048", "-f", private_key_path, "-N", ""]
         if run_command(command):
-            print(f"Successfully created SSH key pair: {private_key_path}, {public_key_path}")
+            print(
+                f"Successfully created SSH key pair: {private_key_path}, {public_key_path}")
             # Set appropriate permissions for the private key
             os.chmod(private_key_path, 0o600)
         else:
@@ -103,17 +116,21 @@ def create_ssh_key(key_name, key_dir="../terraform"):
             sys.exit(1)
     else:
         print(f"Using existing SSH key: {private_key_path}")
-    return private_key_path # Return the path to the private key
+    return private_key_path  # Return the path to the private key
+
 
 def main():
     start_time = datetime.now()
     print(f"Benchmark started at: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    config_file = "../config.json" # Relative to the script's location
-    instance_info_file = "../instance_info.json" # Relative path for instance info
+    config_file = "../config.json"  # Relative to the script's location
+    instance_info_file = "../instance_info.json"  # Relative path for instance info
     terraform_dir = "../terraform"
     data_dir = "../data"
     results_dir = "../results"
+    # Use absolute path for instance_info_file to avoid issues in generate_instance_info
+    instance_info_file = os.path.abspath(os.path.join(
+        script_dir, "..", "data", "instance_info.json"))
 
     # Ensure data and results directories exist
     os.makedirs(data_dir, exist_ok=True)
@@ -121,7 +138,7 @@ def main():
 
     # --- 0. Load Configuration ---
     print("\n--- Step 0: Loading Configuration ---")
-    config = load_config(config_file) # Keep loading config here
+    config = load_config(config_file)  # Keep loading config here
     print("Configuration loaded successfully.")
     # print(json.dumps(config, indent=2)) # Optional: Print loaded config
 
@@ -131,22 +148,22 @@ def main():
     if config['create_ssh_key']:
         create_ssh_key(config['ssh_key_name'], terraform_dir)
     elif not os.path.exists(ssh_key_path):
-         print(f"Error: SSH key '{ssh_key_path}' not found and 'create_ssh_key' is false.")
-         print("Please create the key manually or set 'create_ssh_key' to true in the config.")
-         sys.exit(1)
+        print(
+            f"Error: SSH key '{ssh_key_path}' not found and 'create_ssh_key' is false.")
+        print(
+            "Please create the key manually or set 'create_ssh_key' to true in the config.")
+        sys.exit(1)
     else:
         print(f"Using existing SSH key: {ssh_key_path}")
-
 
     # --- 2. Generate Terraform Configuration ---
     print("\n--- Step 2: Generating Terraform Configuration ---")
     # Pass the config file path (string) and terraform directory path (string)
     if generate_terraform(config_file, terraform_dir) != 0:
-         print("Error: Failed to generate Terraform configuration.")
-         sys.exit(1)
+        print("Error: Failed to generate Terraform configuration.")
+        sys.exit(1)
     # The specific tfvars file isn't generated by generate_terraform, adjust log message if needed
     print(f"Terraform configuration files generated in: {terraform_dir}")
-
 
     # --- 3. Apply Terraform Configuration ---
     print("\n--- Step 3: Applying Terraform Configuration (terraform init & apply) ---")
@@ -157,30 +174,61 @@ def main():
         print("Error: terraform apply failed.")
         # Optional: Attempt cleanup even if apply fails?
         if config['cleanup_resources']:
-             print("\nAttempting Terraform destroy despite apply failure...")
-             run_command(["terraform", "destroy", "-auto-approve"], cwd=terraform_dir, check=False)
+            print("\nAttempting Terraform destroy despite apply failure...")
+            run_command(["terraform", "destroy", "-auto-approve"],
+                        cwd=terraform_dir, check=False)
         sys.exit(1)
     print("Terraform apply completed successfully.")
 
-
     # --- 4. Generate Instance Information ---
     print("\n--- Step 4: Generating Instance Information ---")
-    if generate_instance_info(terraform_dir, instance_info_file) != 0:
+    terraform_output_json_path = os.path.join(
+        terraform_dir, "terraform_output.json")
+
+    print(f"Generating Terraform output JSON to: {terraform_output_json_path}")
+    tf_output_cmd = ["terraform", "output", "-json"]
+    try:
+        # Run terraform output and capture the JSON
+        result = subprocess.run(
+            tf_output_cmd, capture_output=True, text=True, check=True, cwd=terraform_dir)
+        # Write the captured JSON to the file
+        with open(terraform_output_json_path, 'w') as f_out:
+            f_out.write(result.stdout)
+        print("Terraform output saved successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {' '.join(tf_output_cmd)}")
+        print(f"Return code: {e.returncode}")
+        print(f"Stderr: {e.stderr}")
+        if config['cleanup_resources']:
+            print("\nAttempting Terraform destroy due to output failure...")
+            run_command(["terraform", "destroy", "-auto-approve"],
+                        cwd=terraform_dir, check=False)
+        sys.exit(1)
+    except Exception as e:
+        print(
+            f"Error writing Terraform output to {terraform_output_json_path}: {e}")
+        if config['cleanup_resources']:
+            print("\nAttempting Terraform destroy due to output failure...")
+            run_command(["terraform", "destroy", "-auto-approve"],
+                        cwd=terraform_dir, check=False)
+        sys.exit(1)
+
+    # Call the modified generate_instance_info function with correct paths
+    if generate_instance_info(terraform_output_json_path, instance_info_file) != 0:
         print("Error: Failed to generate instance information.")
         if config['cleanup_resources']:
-             print("\nAttempting Terraform destroy due to instance info failure...")
-             run_command(["terraform", "destroy", "-auto-approve"], cwd=terraform_dir, check=False)
+            print("\nAttempting Terraform destroy due to instance info failure...")
+            run_command(["terraform", "destroy", "-auto-approve"],
+                        cwd=terraform_dir, check=False)
         sys.exit(1)
     print(f"Instance information saved to: {instance_info_file}")
 
     # Give instances a bit more time to fully initialize SSH
-    print("Waiting 60 seconds for instances to fully initialize SSH...")
-    time.sleep(60)
-
+    print("Waiting 5 seconds for instances to fully initialize SSH...")
+    time.sleep(5)
 
     # --- 5. Run Benchmark Tests ---
     print("\n--- Step 5: Running Benchmark Tests ---")
-    test_threads = []
     test_results = {"latency": None, "p2p": None, "udp": None}
     errors_occurred = False
 
@@ -199,7 +247,6 @@ def main():
         print(f"An unexpected error occurred during latency test: {e}")
         errors_occurred = True
         test_results["latency"] = False
-
 
     # 5b. Point-to-Point Test (Conditional)
     if config['run_p2p_tests']:
@@ -220,19 +267,18 @@ def main():
     else:
         print("\nSkipping Point-to-Point Test (run_p2p_tests is false).")
 
-
     # 5c. UDP Multicast Test (Conditional)
     if config['run_udp_tests']:
         print("\n--- Running UDP Multicast Test ---")
         udp_output_dir = os.path.join(data_dir, "udp")
         try:
             if run_udp_test(instance_info_file, ssh_key_path, udp_output_dir, config['use_private_ip'], config['udp_server_region'], config['udp_bandwidth'], config['udp_duration'], config['test_intra_region']) == 0:
-                 print("UDP Multicast test completed successfully.")
-                 test_results["udp"] = True
+                print("UDP Multicast test completed successfully.")
+                test_results["udp"] = True
             else:
-                 print("Error: UDP Multicast test failed.")
-                 errors_occurred = True
-                 test_results["udp"] = False
+                print("Error: UDP Multicast test failed.")
+                errors_occurred = True
+                test_results["udp"] = False
         except Exception as e:
             print(f"An unexpected error occurred during UDP test: {e}")
             errors_occurred = True
@@ -264,14 +310,13 @@ def main():
     print(f"\nParsing collected data from {results_dir}...")
     try:
         if parse_data(results_dir, parsed_output_file) == 0:
-             print(f"Parsed data saved to {parsed_output_file}")
+            print(f"Parsed data saved to {parsed_output_file}")
         else:
-             print("Error: Failed to parse data.")
-             # Decide if this is critical enough to stop
+            print("Error: Failed to parse data.")
+            # Decide if this is critical enough to stop
     except Exception as e:
         print(f"An unexpected error occurred during data parsing: {e}")
         # Decide if this is critical enough to stop
-
 
     # 6c. Format Data
     formatted_output_file = os.path.join(results_dir, "formatted_results.md")
@@ -286,7 +331,6 @@ def main():
         print(f"An unexpected error occurred during data formatting: {e}")
         # Decide if this is critical enough to stop
 
-
     # --- 7. Cleanup Resources (Conditional) ---
     if config['cleanup_resources']:
         print("\n--- Step 7: Cleaning Up Resources (terraform destroy) ---")
@@ -300,7 +344,6 @@ def main():
     else:
         print("\n--- Skipping Resource Cleanup (cleanup_resources is false) ---")
 
-
     # --- Completion ---
     end_time = datetime.now()
     print(f"\nBenchmark finished at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -308,7 +351,7 @@ def main():
 
     if errors_occurred:
         print("\nBenchmark completed with errors in one or more tests.")
-        sys.exit(1) # Exit with error code if tests failed
+        sys.exit(1)  # Exit with error code if tests failed
     else:
         print("\nBenchmark completed successfully.")
         sys.exit(0)
