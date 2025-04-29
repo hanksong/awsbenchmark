@@ -4,8 +4,14 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
 
 # Team Members
 
-- Hanliang Song (hs67)
-  - MS in Financial Engineering 2025' | Quant Developer | Seeking for full-time position starting Dec 2025.
+![Hanliang Song](imgs/hs67.jpg){width=100}
+Master Studnet
+I am currently a master student majoring in Financial Engineering at UIUC graduating in December 2025. I have strong hands-on experience in building high-frequency trading systems, low-latency infrastructure, and quantitative research pipelines. Skilled in C++, Python, Docker, and Linux, I have developed real-time trading systems based on CTP APIs, asynchronous backtesting frameworks, and event-driven crypto strategies. 
+
+Email: [hs67@illinois.edu](mailto:hs67@illinois.edu)  
+LinkedIn: https://www.linkedin.com/in/hanliang-song/
+Github: https://github.com/hanksong
+
 - Tim Rolsh (rolshud2)
 - Austin Belman (abelma2)
 
