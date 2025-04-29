@@ -2,6 +2,13 @@
 # generate_terraform.py
 # Generate Terraform configuration files from config.json
 
+import sys
+import os
+
+# so constants can be imported
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 from Constants import AWS_FALLBACK_AMI_IDS, AWS_REGION_NAMES
 import json
 import os
@@ -444,7 +451,7 @@ def generate_terraform(config_path, terraform_dir):
     os.makedirs(terraform_dir, exist_ok=True)
 
     try:
-        # Load configuration
+        # Load configuration using the provided path
         with open(config_path, 'r') as f:
             config = json.load(f)
 
@@ -453,26 +460,25 @@ def generate_terraform(config_path, terraform_dir):
             print("Error: 'aws_regions' not found or empty in config file.")
             return 1
 
-        instance_type = config.get('instance_type', 't2.micro')
-        key_name = config.get('ssh_key_name', 'aws-network-benchmark')
-        # Use region_instance_counts if available, otherwise default instance_count
-        default_instance_count = config.get('instance_count', 1)
         region_instance_counts = config.get('region_instance_counts', {})
 
         # Get AMI IDs
         ami_ids = get_latest_ami_ids(aws_regions)
 
-        # Generate provider.tf
-        generate_provider_tf(aws_regions, terraform_dir)
+        provider_tf_path = os.path.join(terraform_dir, "provider.tf")
+        generate_provider_tf(aws_regions, provider_tf_path)
 
-        # Generate variables.tf
-        generate_variables_tf(config, ami_ids, terraform_dir)
+        variables_tf_path = os.path.join(terraform_dir, "variables.tf")
+        # Assuming generate_variables_tf needs regions, path, ami_ids
+        generate_variables_tf(aws_regions, variables_tf_path, ami_ids)
 
-        # Generate main.tf
-        generate_main_tf(config, terraform_dir)
+        main_tf_path = os.path.join(terraform_dir, "main.tf")
+        # Assuming generate_main_tf needs regions, path, region_instance_counts
+        generate_main_tf(aws_regions, main_tf_path, region_instance_counts)
 
-        # Generate outputs.tf
-        generate_outputs_tf(config, terraform_dir)
+        outputs_tf_path = os.path.join(terraform_dir, "outputs.tf")
+        # Assuming generate_outputs_tf needs regions, path
+        generate_outputs_tf(aws_regions, outputs_tf_path)
 
         print("Terraform configuration files generated successfully.")
         return 0
@@ -485,6 +491,9 @@ def generate_terraform(config_path, terraform_dir):
         return 1
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+        # Print traceback for detailed debugging
+        import traceback
+        traceback.print_exc()
         return 1
 
 
@@ -499,8 +508,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Construct absolute paths based on project root
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Already defined globally
     abs_config_path = os.path.join(project_root, args.config)
     abs_terraform_dir = os.path.join(project_root, args.terraform_dir)
 
+    # Call generate_terraform with the correct arguments from command line
     sys.exit(generate_terraform(config_path=abs_config_path, terraform_dir=abs_terraform_dir))
