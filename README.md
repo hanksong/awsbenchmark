@@ -5,22 +5,23 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
 # Team Members
 
 ![Hanliang Song](imgs/hs67.jpg){width=100}
-Master Studnet
-I am currently a master student majoring in Financial Engineering at UIUC graduating in December 2025. I have strong hands-on experience in building high-frequency trading systems, low-latency infrastructure, and quantitative research pipelines. Skilled in C++, Python, Docker, and Linux, I have developed real-time trading systems based on CTP APIs, asynchronous backtesting frameworks, and event-driven crypto strategies. 
 
-Email: [hs67@illinois.edu](mailto:hs67@illinois.edu)  
-LinkedIn: https://www.linkedin.com/in/hanliang-song/
+***Hanliang Song***
+
+I am currently a master student majoring in Financial Engineering at UIUC graduating in December 2025. I have strong hands-on experience in building high-frequency trading systems, low-latency infrastructure, and quantitative research pipelines. Skilled in C++, Python, Docker, and Linux, I have developed real-time trading systems based on CTP APIs, asynchronous backtesting frameworks, and event-driven crypto strategies.
+
+Email: [hs67@illinois.edu](mailto:hs67@illinois.edu)LinkedIn: https://www.linkedin.com/in/hanliang-song/
 Github: https://github.com/hanksong
 
 - Tim Rolsh (rolshud2)
 - Austin Belman (abelma2)
 
-![David Mun](imgs/davidm16.jpeg){width=100}  
+![David Mun](imgs/davidm16.jpeg){width=100}
 ***David Mun***
 
 I am currently a junior studying Computer Engineering at UIUC graduating in Spring 2026. I have previous experience working with low-latency C++ embedded systems at Rivian and I am currently working at DRW as a software engineering intern. I am interested in intersecting my understanding of computer systems with trading, and I am motivated by solving hard problems.
 
-Email: [davidm16@illinois.edu](mailto:davidm16@illinois.edu)  
+Email: [davidm16@illinois.edu](mailto:davidm16@illinois.edu)
 LinkedIn: https://www.linkedin.com/in/davidmun910/
 
 # Features
