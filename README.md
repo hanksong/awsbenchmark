@@ -7,6 +7,9 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
 - Hanliang Song (hs67)
   - MS in Financial Engineering 2025' | Quant Developer | Seeking for full-time position starting Dec 2025.
 - Tim Rolsh (rolshud2)
+  - Undergraduate student at the University of Illinois Urbana-Champaign pursuing a BSLAS in Statistics and Computer Science, expected graduation May 2027. Full-stack software engineer and clean code practitioner. Open to internship opportunities and part-time roles during studies, seeking full-time positions starting May 2027.
+  - LinkedIn: [https://www.linkedin.com/in/tim-rolsh-492088261/](https://www.linkedin.com/in/tim-rolsh-492088261/)
+  - GitHub: [https://github.com/timrolsh](https://github.com/timrolsh)
 - Austin Belman (abelma2)
 - David Mun (davidm16)
 
@@ -128,16 +131,19 @@ Sample configuration files are provided in the `terraform/config.json` directory
    git clone https://github.com/yourusername/aws-network-benchmark.git
    cd aws-network-benchmark
    ```
+
 2. Install dependencies:
 
    ```
    pip install -r requirements.txt
    ```
+
 3. Configure AWS credentials:
 
    ```
    aws configure
    ```
+
 4. Modify the `config.json` configuration file (optional):
 
    ```json
@@ -151,8 +157,8 @@ Sample configuration files are provided in the `terraform/config.json` directory
    }
    ```
 
-   * Set `use_private_ip` to `true` to use private IPs for testing (when using VPC Peering or other connection methods within the same region)
-   * Set `use_private_ip` to `false` (default) to use public IPs for testing (for general cross-region scenarios)
+   - Set `use_private_ip` to `true` to use private IPs for testing (when using VPC Peering or other connection methods within the same region)
+   - Set `use_private_ip` to `false` (default) to use public IPs for testing (for general cross-region scenarios)
 5. Run the benchmark:
 
 ```bash
@@ -182,7 +188,7 @@ Issues and pull requests are welcome.
 
 ## Troubleshooting
 
-### cannot automatically import ssh key to aws, please run the following command to import manually:
+### cannot automatically import ssh key to aws, please run the following command to import manually
 
 ```
 aws ec2 import-key-pair --region us-east-1 --key-name aws-network-benchmark --public-key-material fileb://$HOME/.ssh/aws-network-benchmark.pub
