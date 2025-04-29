@@ -83,7 +83,7 @@ def parse_udp_results(udp_tests):
     
     return pd.DataFrame(data)
 
-def main():
+def parse_data(): # Renamed from main
     parser = argparse.ArgumentParser(description="parse the iperf3 test results data")
     parser.add_argument("--input", required=True, help="collected test results json file")
     parser.add_argument("--output-dir", default="../data", help="output directory")
@@ -157,4 +157,4 @@ def main():
     print(f"results summary saved to {summary_file}")
 
 if __name__ == "__main__":
-    main()
+    parse_data()
