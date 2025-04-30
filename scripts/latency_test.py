@@ -22,7 +22,7 @@ def load_instance_info(json_file):
         sys.exit(1)
 
 
-def run_ping_test(server_ip, client_ip, ssh_key, count=10, output_dir="../data"):
+def run_ping_test(server_ip, client_ip, ssh_key, ssh_user, count=10, output_dir="../data"):
     """Execute ping latency test"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = f"{output_dir}/latency_{server_ip}_to_{client_ip}_{timestamp}.json"
@@ -32,7 +32,7 @@ def run_ping_test(server_ip, client_ip, ssh_key, count=10, output_dir="../data")
 
     # Run ping test from client to server
     ping_cmd = (
-        f"ssh -i {ssh_key} -o StrictHostKeyChecking=no ec2-user@{client_ip} "
+        f"ssh -i {ssh_key} -o StrictHostKeyChecking=no {ssh_user}@{client_ip} "
         f"'ping -c {count} -i 0.2 {server_ip} > /tmp/ping_result.txt'"
     )
 
@@ -41,7 +41,7 @@ def run_ping_test(server_ip, client_ip, ssh_key, count=10, output_dir="../data")
         subprocess.run(ping_cmd, shell=True, check=True)
 
         # Get ping results
-        get_result_cmd = f"scp -i {ssh_key} -o StrictHostKeyChecking=no ec2-user@{client_ip}:/tmp/ping_result.txt /tmp/ping_result.txt"
+        get_result_cmd = f"scp -i {ssh_key} -o StrictHostKeyChecking=no {ssh_user}@{client_ip}:/tmp/ping_result.txt /tmp/ping_result.txt"
         subprocess.run(get_result_cmd, shell=True, check=True)
 
         # Parse ping results
@@ -181,7 +181,7 @@ def run_latency_benchmark(instance_info_path, ssh_key_path, ping_count, output_d
                                 print(
                                     f"\nTesting latency within {src_region}: Instance {i+1} -> Instance {j+1} (using {ip_type_desc} IPs)")
                                 result_file, ping_stats = run_ping_test(
-                                    t_ip, s_ip, ssh_key_path,
+                                    t_ip, s_ip, ssh_key_path, ssh_user,
                                     ping_count, output_dir
                                 )
                                 if result_file and ping_stats:

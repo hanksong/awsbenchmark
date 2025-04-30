@@ -48,6 +48,8 @@ def load_config(config_file):
         config.setdefault("udp_duration", 10)
 
         config.setdefault("cleanup_resources", True)
+        config.setdefault("ssh_user", "ec2-user")
+
         # --- Validation ---
         if not config.get("aws_regions"):
             print("Error: 'aws_regions' must be specified in the config file.")
@@ -95,6 +97,24 @@ def run_command(command, cwd=None, check=True):
         return False
 
 
+def import_ssh_key_to_aws(key_name, public_key_path, regions):
+    for region in regions:
+        # best-effort delete any old key (ignore failures)
+        run_command([
+            "aws", "ec2", "delete-key-pair",
+            "--region", region,
+            "--key-name", key_name
+        ], check=False)
+
+        # import the .pub file directly
+        run_command([
+            "aws", "ec2", "import-key-pair",
+            "--region", region,
+            "--key-name", key_name,
+            "--public-key-material", f"fileb://{public_key_path}"
+        ])
+
+
 def create_ssh_key(key_name, key_dir="../terraform"):
     """Creates an SSH key pair if it doesn't exist."""
     private_key_path = os.path.join(key_dir, key_name)
@@ -129,24 +149,38 @@ def main():
     terraform_dir = "../terraform"
     data_dir = "../data"
     results_dir = "../results"
-    script_dir = os.path.dirname(os.path.abspath(__file__))  # Define script_dir earlier
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     instance_info_file = os.path.abspath(os.path.join(
         script_dir, "..", "data", "instance_info.json"))
+    # Ensure terraform_dir is absolute or relative to script_dir if needed
+    abs_terraform_dir = os.path.abspath(
+        os.path.join(script_dir, terraform_dir))
+    abs_data_dir = os.path.abspath(os.path.join(script_dir, data_dir))
+    abs_results_dir = os.path.abspath(os.path.join(script_dir, results_dir))
 
     # Ensure data and results directories exist
-    os.makedirs(data_dir, exist_ok=True)
-    os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(abs_data_dir, exist_ok=True)
+    os.makedirs(abs_results_dir, exist_ok=True)
 
     # --- 0. Load Configuration ---
     print("\n--- Step 0: Loading Configuration ---")
-    config = load_config(config_file)  # Keep loading config here
+    # Assuming config_file = "../config.json" is relative to script_dir
+    abs_config_file = os.path.abspath(os.path.join(script_dir, config_file))
+    config = load_config(abs_config_file)
     print("Configuration loaded successfully.")
 
     # --- 1. Create SSH Key (if needed) ---
     print("\n--- Step 1: Checking/Creating SSH Key ---")
-    ssh_key_path = os.path.join(terraform_dir, config['ssh_key_name'])  
+    # Use absolute path for ssh key
+    ssh_key_path = os.path.join(abs_terraform_dir, config['ssh_key_name'])
     if config['create_ssh_key']:
-        create_ssh_key(config['ssh_key_name'], terraform_dir)
+        create_ssh_key(config['ssh_key_name'], abs_terraform_dir)
+        pub_key_path = ssh_key_path + ".pub"
+        import_ssh_key_to_aws(
+            key_name=config["ssh_key_name"],
+            public_key_path=pub_key_path,
+            regions=config["aws_regions"]
+        )
     elif not os.path.exists(ssh_key_path):
         print(
             f"Error: SSH key '{ssh_key_path}' not found and 'create_ssh_key' is false.")
@@ -158,158 +192,192 @@ def main():
 
     # --- 2. Generate Terraform Configuration ---
     print("\n--- Step 2: Generating Terraform Configuration ---")
-    if generate_terraform(config_file, terraform_dir) != 0:
+    if generate_terraform(abs_config_file, abs_terraform_dir) != 0:
         print("Error: Failed to generate Terraform configuration.")
         sys.exit(1)
-    print(f"Terraform configuration files generated in: {terraform_dir}")
+    print(f"Terraform configuration files generated in: {abs_terraform_dir}")
 
     # --- 3. Apply Terraform Configuration ---
     print("\n--- Step 3: Applying Terraform Configuration (terraform init & apply) ---")
-    if not run_command(["terraform", "init"], cwd=terraform_dir):
+    if not run_command(["terraform", "init"], cwd=abs_terraform_dir):
         print("Error: terraform init failed.")
         sys.exit(1)
-    if not run_command(["terraform", "apply", "-auto-approve"], cwd=terraform_dir):
+    if not run_command(["terraform", "apply", "-auto-approve"], cwd=abs_terraform_dir):
         print("Error: terraform apply failed.")
         if config['cleanup_resources']:
-            print("\nAttempting Terraform destroy despite apply failure...")
+            print("Attempting to clean up resources...")
             run_command(["terraform", "destroy", "-auto-approve"],
-                        cwd=terraform_dir, check=False)
+                        cwd=abs_terraform_dir, check=False)
         sys.exit(1)
     print("Terraform apply completed successfully.")
 
-    # --- 4. Generate Instance Information ---
+    # --- 4. Generate Instance Info ---
     print("\n--- Step 4: Generating Instance Information ---")
-    terraform_output_json_path = os.path.join(
-        terraform_dir, "terraform_output.json")
-
-    print(f"Generating Terraform output JSON to: {terraform_output_json_path}")
-    tf_output_cmd = ["terraform", "output", "-json"]
+    terraform_output_file = os.path.join(
+        abs_terraform_dir, "terraform_output.json")
+    if not run_command(["terraform", "output", "-json"], cwd=abs_terraform_dir):
+        print("Error: terraform output failed.")
+        # Attempt cleanup if apply succeeded but output failed
+        if config['cleanup_resources']:
+            print("Attempting to clean up resources...")
+            run_command(["terraform", "destroy", "-auto-approve"],
+                        cwd=abs_terraform_dir, check=False)
+        sys.exit(1)
+    # Capture the output to a file
     try:
-        result = subprocess.run(
-            tf_output_cmd, capture_output=True, text=True, check=True, cwd=terraform_dir)
-        with open(terraform_output_json_path, 'w') as f_out:
-            f_out.write(result.stdout)
-        print("Terraform output saved successfully.")
+        tf_output_result = subprocess.run(
+            ["terraform", "output", "-json"], cwd=abs_terraform_dir, capture_output=True, text=True, check=True)
+        with open(terraform_output_file, 'w') as f_out:
+            f_out.write(tf_output_result.stdout)
+        print(f"Terraform output saved to {terraform_output_file}")
     except subprocess.CalledProcessError as e:
-        print(f"Error executing command: {' '.join(tf_output_cmd)}")
-        print(f"Return code: {e.returncode}")
-        print(f"Stderr: {e.stderr}")
+        print(f"Error capturing terraform output: {e}")
         if config['cleanup_resources']:
-            print("\nAttempting Terraform destroy due to output failure...")
+            print("Attempting to clean up resources...")
             run_command(["terraform", "destroy", "-auto-approve"],
-                        cwd=terraform_dir, check=False)
-        sys.exit(1)
-    except Exception as e:
-        print(
-            f"Error writing Terraform output to {terraform_output_json_path}: {e}")
-        if config['cleanup_resources']:
-            print("\nAttempting Terraform destroy due to output failure...")
-            run_command(["terraform", "destroy", "-auto-approve"],
-                        cwd=terraform_dir, check=False)
+                        cwd=abs_terraform_dir, check=False)
         sys.exit(1)
 
-    if generate_instance_info(terraform_output_json_path, instance_info_file) != 0:
+    if generate_instance_info(terraform_output_file, instance_info_file) != 0:
         print("Error: Failed to generate instance information.")
+        # Attempt cleanup
         if config['cleanup_resources']:
-            print("\nAttempting Terraform destroy due to instance info failure...")
+            print("Attempting to clean up resources...")
             run_command(["terraform", "destroy", "-auto-approve"],
-                        cwd=terraform_dir, check=False)
+                        cwd=abs_terraform_dir, check=False)
         sys.exit(1)
     print(f"Instance information saved to: {instance_info_file}")
-
     print("Waiting 5 seconds for instances to fully initialize SSH...")
     time.sleep(5)
 
     # --- 5. Run Benchmark Tests ---
     print("\n--- Step 5: Running Benchmark Tests ---")
-    test_results = {}
+    latency_summary = None
+    p2p_summary = None
+    udp_summary = None
+    ssh_user = config['ssh_user']  # Assuming ssh_user is defined in config
 
-    # Latency Test
-    if config.get('run_latency_tests', True):
+    try:
+        # --- Latency Test ---
         print("\n--- Running Latency Test ---")
         try:
             latency_summary = run_latency_benchmark(
-                instance_info_file, ssh_key_path, config.get(
-                    'ping_count', 20), data_dir,
-                all_regions=True,
+                instance_info_path=instance_info_file,
+                ssh_key_path=ssh_key_path,  # Pass absolute path
+                ping_count=20,  # Example value, consider making configurable
+                output_dir=abs_data_dir,
+                all_regions=True,  # Default to all regions for now
                 use_private_ip=config['use_private_ip'],
                 intra_region=config['test_intra_region']
             )
-            test_results['latency'] = latency_summary
-            print(f"Latency test summary: {latency_summary}")
+            if latency_summary:
+                print(f"Latency test summary: {latency_summary}")
+            else:
+                print("Latency test failed or produced no summary.")
+                errors_occurred = True
         except Exception as e:
             print(f"An unexpected error occurred during latency test: {e}")
-            traceback.print_exc()
+            traceback.print_exc()  # Print detailed traceback
             errors_occurred = True
 
-    # Point-to-Point Test (iperf3)
-    if config['run_p2p_tests']:
-        print("\n--- Running Point-to-Point Test ---")
-        try:
-            p2p_summary = point_to_point_test(
-                instance_info_file, ssh_key_path, config['p2p_duration'],
-                config['p2p_parallel'], data_dir,
-                all_regions=True,
-                use_private_ip=config['use_private_ip'],
-                intra_region=config['test_intra_region']
-            )
-            test_results['p2p'] = p2p_summary
-            print(f"P2P test summary: {p2p_summary}")
-        except Exception as e:
-            print(f"An unexpected error occurred during P2P test: {e}")
-            traceback.print_exc()
-            errors_occurred = True
+        # --- Point-to-Point Test ---
+        if config.get('run_p2p_tests', False):
+            print("\n--- Running Point-to-Point Test ---")
+            try:
+                p2p_summary = point_to_point_test(
+                    instance_info_path=instance_info_file,
+                    ssh_key_path=ssh_key_path,  # Pass absolute path
+                    duration=config['p2p_duration'],
+                    parallel=config['p2p_parallel'],
+                    output_dir=abs_data_dir,
+                    use_private_ip=config['use_private_ip'],
+                    # Corrected argument name
+                    test_intra_region=config['test_intra_region'],
+                    all_regions=True  # Assuming test all regions for P2P
+                )
+                if p2p_summary:
+                    print(f"P2P test summary: {p2p_summary}")
+                else:
+                    print("P2P test failed or produced no summary.")
+                    errors_occurred = True
+            except Exception as e:
+                print(f"An unexpected error occurred during P2P test: {e}")
+                traceback.print_exc()  # Print detailed traceback
+                errors_occurred = True
+        else:
+            print("\n--- Skipping Point-to-Point Test (run_p2p_tests is false) ---")
 
-    # UDP Multicast Test (iperf3)
-    if config['run_udp_tests']:
-        print("\n--- Running UDP Multicast Test ---")
-        try:
-            udp_summary = run_udp_test(
-                instance_info_file,
-                ssh_key_path,
-                data_dir,
-                config['use_private_ip'],
-                config['udp_server_region'],
-                config['udp_bandwidth'],
-                config['udp_duration']
-            )
-            test_results['udp'] = udp_summary
-            print(f"UDP test summary: {udp_summary}")
-        except Exception as e:
-            print(f"An unexpected error occurred during UDP test: {e}")
-            traceback.print_exc()
-            errors_occurred = True
+        # --- UDP Multicast Test ---
+        if config.get('run_udp_tests', False):
+            print("\n--- Running UDP Multicast Test ---")
+            try:
+                udp_summary = run_udp_test(
+                    instance_info_path=instance_info_file,
+                    ssh_key_path=ssh_key_path,  # Pass absolute path
+                    output_dir=abs_data_dir,
+                    use_private_ip=config['use_private_ip'],
+                    server_region=config['udp_server_region'],
+                    bandwidth=config['udp_bandwidth'],
+                    duration=config['udp_duration']
+                    # Note: udp_multicast_test.py doesn't currently use intra_region/all_regions flags directly
+                )
+                if udp_summary:
+                    # run_udp_test returns a list of results, not a summary path currently
+                    print(
+                        f"UDP test completed. Results details logged in {abs_data_dir}")
+                    # Consider saving a summary file similar to latency/p2p if needed
+                else:
+                    print("UDP test failed or produced no results.")
+                    errors_occurred = True
+            except Exception as e:
+                print(f"An unexpected error occurred during UDP test: {e}")
+                traceback.print_exc()  # Print detailed traceback
+                errors_occurred = True
+        else:
+            print("\n--- Skipping UDP Multicast Test (run_udp_tests is false) ---")
 
-    if not test_results and (config.get('run_latency_tests', True) or config['run_p2p_tests'] or config['run_udp_tests']):
-        print("\nWarning: No tests were run or all tests failed.")
-    elif test_results:
         print("\nBenchmark tests completed.")
 
-    # --- 6. Collect and Process Results ---
-    print("\n--- Step 6: Collecting and Processing Results ---")
-    parsed_results_file = os.path.join(results_dir, "parsed_results.json")
-    formatted_results_file = os.path.join(results_dir, "formatted_results.md")
-
-    print(f"\nCollecting results from {data_dir} to {results_dir}...")
-    try:
-        collect_results(data_dir, results_dir)
-        print(f"Results collected in {results_dir}")
     except Exception as e:
-        print(f"An unexpected error occurred during result collection: {e}")
-        traceback.print_exc()
+        print(f"\nAn critical error occurred during benchmark execution: {e}")
+        traceback.print_exc()  # Print detailed traceback
         errors_occurred = True
+    finally:
+        # --- 6. Collect and Process Results ---
+        # This step might need adjustment depending on what the test functions return
+        print("\n--- Step 6: Collecting and Processing Results ---")
+        try:
+            # Assuming collect_results aggregates files from data_dir
+            collected_data_path = collect_results(
+                abs_data_dir, abs_data_dir)  # Save collected in data_dir
+            if collected_data_path:
+                print(f"Collected results saved to: {collected_data_path}")
+                # Assuming parse_data takes the collected file and outputs parsed files
+                # Output parsed data to data_dir
+                parse_data(collected_data_path, abs_data_dir)
+                # Assuming format_data takes parsed files (or the dir) and outputs report
+                # Output report to results_dir
+                format_data(abs_data_dir, abs_results_dir)
+            else:
+                print("No results collected.")
+                errors_occurred = True
+        except Exception as e:
+            print(f"An error occurred during results processing: {e}")
+            traceback.print_exc()  # Print detailed traceback
+            errors_occurred = True
 
-    # --- 7. Cleanup ---
-    if config['cleanup_resources']:
-        print("\n--- Step 7: Cleaning Up Resources (terraform destroy) ---")
-        if not run_command(["terraform", "destroy", "-auto-approve"], cwd=terraform_dir):
-            print("Warning: terraform destroy failed. Resources may need manual cleanup.")
+        # --- 7. Cleanup Terraform Resources ---
+        if config['cleanup_resources']:
+            print("\n--- Step 7: Cleaning Up Terraform Resources ---")
+            if not run_command(["terraform", "destroy", "-auto-approve"], cwd=abs_terraform_dir, check=False):
+                print(
+                    "Warning: terraform destroy failed. Manual cleanup might be required.")
+                errors_occurred = True  # Mark as error if cleanup fails
+            else:
+                print("Terraform resources destroyed successfully.")
         else:
-            print("Terraform destroy completed successfully.")
-    else:
-        print("\n--- Skipping Resource Cleanup (cleanup_resources is false) ---")
+            print("\n--- Skipping Terraform Cleanup (cleanup_resources is false) ---")
 
-    # --- Completion ---
     end_time = datetime.now()
     print(f"\nBenchmark finished at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Total execution time: {end_time - start_time}")
@@ -323,9 +391,4 @@ def main():
 
 
 if __name__ == "__main__":
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    if os.getcwd() != script_dir:
-        print(f"Changing working directory to: {script_dir}")
-        os.chdir(script_dir)
-
     main()
