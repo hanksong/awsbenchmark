@@ -6,8 +6,9 @@ import json
 import argparse
 import os
 import sys
+import glob
+from datetime import datetime
 import re
-import shutil
 
 
 def parse_iperf3_result(result_file):
@@ -80,6 +81,130 @@ def extract_region_info(filename):
         return None
 
 
+def collect_results(data_dir, output_file=None):
+    """collect and format the test results"""
+    # find all the test result files
+    p2p_files = glob.glob(os.path.join(data_dir, 'p2p_*.json'))
+    udp_files = glob.glob(os.path.join(data_dir, 'udp_multicast_*.json'))
+
+    # first find and parse the summary files to get the region info
+    p2p_summary_files = glob.glob(os.path.join(
+        data_dir, 'p2p_test_summary_*.json'))
+    udp_summary_files = glob.glob(os.path.join(
+        data_dir, 'udp_multicast_summary_*.json'))
+
+    # create the ip to region map
+    ip_to_region_map = {}
+    # first get the region info from the udp summary files
+    for summary_file in udp_summary_files:
+        try:
+            with open(summary_file, 'r') as f:
+                summary = json.load(f)
+                if 'ip_to_region_map' in summary:
+                    ip_to_region_map.update(summary['ip_to_region_map'])
+                else:
+                    # compatible with the old version summary files
+                    server_region = summary.get('server_region')
+                    server_ip = summary.get('server_ip')
+                    if server_ip and server_region:
+                        ip_to_region_map[server_ip] = server_region
+
+                    for i, result in enumerate(summary.get('results', [])):
+                        client_ip = result.get('client_ip')
+                        if client_ip and i < len(summary.get('client_regions', [])):
+                            ip_to_region_map[client_ip] = summary['client_regions'][i]
+        except Exception as e:
+            print(
+                f"warning: failed to parse the udp summary file {summary_file}: {e}")
+
+    p2p_region_map = {}
+    for summary_file in p2p_summary_files:
+        try:
+            with open(summary_file, 'r') as f:
+                summary = json.load(f)
+                for test in summary:
+                    result_file = os.path.basename(test['result_file'])
+                    p2p_region_map[result_file] = {
+                        'source_region': test['source_region'],
+                        'target_region': test['target_region']
+                    }
+        except Exception as e:
+            print(
+                f"warning: failed to parse the p2p summary file {summary_file}: {e}")
+
+    # parse the p2p test results
+    p2p_results = []
+    for file in p2p_files:
+        if 'summary' not in file:  # skip the summary files
+            result = parse_iperf3_result(file)
+            filename = os.path.basename(file)
+            region_info = extract_region_info(filename)
+
+            if region_info:
+                result.update(region_info)
+
+            # get the region info from the region map
+            if filename in p2p_region_map:
+                result.update(p2p_region_map[filename])
+
+            p2p_results.append(result)
+
+    # parse the udp test results
+    udp_results = []
+    for file in udp_files:
+        if 'summary' not in file:  # skip the summary files
+            result = parse_iperf3_result(file)
+            filename = os.path.basename(file)
+
+            # try to get the region info from the file
+            try:
+                with open(file, 'r') as f:
+                    file_data = json.load(f)
+                    if 'server_region' in file_data:
+                        result['server_region'] = file_data['server_region']
+                    if 'client_region' in file_data:
+                        result['client_region'] = file_data['client_region']
+            except Exception:
+                pass
+
+            # if there is no region info, try to get the region info from the filename
+            if 'server_region' not in result or 'client_region' not in result:
+                ip_info = extract_ip_info(filename)
+                if ip_info:
+                    server_ip = ip_info.get('server_ip')
+                    client_ip = ip_info.get('client_ip')
+
+                    if server_ip and server_ip in ip_to_region_map:
+                        result['server_region'] = ip_to_region_map[server_ip]
+
+                    if client_ip and client_ip in ip_to_region_map:
+                        result['client_region'] = ip_to_region_map[client_ip]
+
+            udp_results.append(result)
+
+    # integrate all the results
+    all_results = {
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'point_to_point_tests': p2p_results,
+        'udp_multicast_tests': udp_results
+    }
+
+    # save the results
+    if output_file:
+        output_path = output_file
+    else:
+        output_path = os.path.join(
+            data_dir, f'collected_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json')
+
+    with open(output_path, 'w') as f:
+        json.dump(all_results, f, indent=2)
+
+    print(f"test results collected and saved to: {output_path}")
+    print(f"total {len(p2p_results)} p2p tests and {len(udp_results)} udp tests")
+
+    return output_path
+
+
 def extract_ip_info(filename):
     """extract the ip info from the filename"""
     # for example: udp_multicast_18.170.227.74_to_34.239.172.73_20250419_224615.json
@@ -92,46 +217,21 @@ def extract_ip_info(filename):
     return None
 
 
-def collect_results(source_dir, target_dir, file_pattern="*.json"):
-    """Collects result files from a source directory to a target directory."""
-    # Ensure target directory exists
-    os.makedirs(target_dir, exist_ok=True)
-
-    print(f"Collecting files matching '{file_pattern}' from {source_dir} to {target_dir}...")
-    collected_count = 0
-    try:
-        for filename in os.listdir(source_dir):
-            # Simple pattern matching (can be enhanced with glob or regex if needed)
-            if filename.endswith(".json") or filename.endswith(".csv") or filename.endswith(".txt"):
-                source_path = os.path.join(source_dir, filename)
-                target_path = os.path.join(target_dir, filename)
-                if os.path.isfile(source_path):
-                    try:
-                        shutil.copy2(source_path, target_path)  # copy2 preserves metadata
-                        print(f"  Copied: {filename}")
-                        collected_count += 1
-                    except Exception as copy_e:
-                        print(f"  Error copying {filename}: {copy_e}")
-
-        print(f"Collected {collected_count} result files.")
-        return 0  # Indicate success
-    except FileNotFoundError:
-        print(f"Error: Source directory not found: {source_dir}")
-        return 1  # Indicate failure
-    except Exception as e:
-        print(f"An unexpected error occurred during collection: {e}")
-        return 1  # Indicate failure
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Collect benchmark result files.")
-    parser.add_argument("--source-dir", required=True, help="Directory containing raw result files.")
-    parser.add_argument("--target-dir", required=True, help="Directory to copy result files into.")
+    parser = argparse.ArgumentParser(
+        description="collect and format the iperf3 test results")
+    parser.add_argument("--data-dir", default="../data",
+                        help="the data directory for the test results")
+    parser.add_argument("--output", help="the output file path")
 
     args = parser.parse_args()
 
-    if collect_results(args.source_dir, args.target_dir) != 0:
+    # ensure the data directory exists
+    if not os.path.isdir(args.data_dir):
+        print(f"error: the data directory {args.data_dir} does not exist")
         sys.exit(1)
+
+    collect_results(args.data_dir, args.output)
 
 
 if __name__ == "__main__":

@@ -2,13 +2,6 @@
 # generate_terraform.py
 # Generate Terraform configuration files from config.json
 
-import sys
-import os
-
-# so constants can be imported
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
-
 from Constants import AWS_FALLBACK_AMI_IDS, AWS_REGION_NAMES
 import json
 import os
@@ -18,6 +11,12 @@ import re
 import subprocess
 import boto3
 from botocore.exceptions import ClientError
+import sys
+import os
+
+# so constants can be imported
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
 
 
 def get_latest_ami_ids(regions):
@@ -439,78 +438,80 @@ def modify_run_benchmark_py(config_hook_file):
     except Exception as e:
         print(f"Error modifying run_benchmark.py: {e}")
 
-# Modify main to accept arguments directly
 
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate Terraform configuration files from config.json")
+    parser.add_argument(
+        "--config", default="../terraform/config.json", help="Path to config.json file")
+    parser.add_argument("--terraform-dir", default="../terraform",
+                        help="Path to Terraform directory")
 
-def generate_terraform(config_path, terraform_dir):
-    """Generates Terraform configuration files."""
-    print(f"Generating Terraform configuration from: {config_path}")
-    print(f"Output directory: {terraform_dir}")
+    args = parser.parse_args()
 
-    # Ensure terraform directory exists
-    os.makedirs(terraform_dir, exist_ok=True)
+    # Resolve paths
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
 
+    config_path = args.config
+    if not os.path.isabs(config_path):
+        config_path = os.path.join(project_root, config_path)
+
+    terraform_dir = args.terraform_dir
+    if not os.path.isabs(terraform_dir):
+        terraform_dir = os.path.join(project_root, terraform_dir)
+
+    # Read config.json
     try:
-        # Load configuration using the provided path
         with open(config_path, 'r') as f:
             config = json.load(f)
 
-        aws_regions = config.get('aws_regions', [])
-        if not aws_regions:
-            print("Error: 'aws_regions' not found or empty in config file.")
-            return 1
+        regions = config.get('aws_regions', [])
+        if not regions:
+            print("Error: No AWS regions specified in config.json")
+            sys.exit(1)
 
-        region_instance_counts = config.get('region_instance_counts', {})
+        # 处理每个区域的实例数量配置
+        region_instance_counts = {}
 
-        # Get AMI IDs
-        ami_ids = get_latest_ami_ids(aws_regions)
+        # 检查config.json中是否有region_instance_counts配置
+        if 'region_instance_counts' in config:
+            region_instance_counts = config['region_instance_counts']
+            print(
+                f"Found region-specific instance counts: {region_instance_counts}")
+        else:
+            # 检查是否有重复的区域，如果有，为每个重复区域创建单独的配置
+            region_counts = {}
+            for region in regions:
+                region_counts[region] = region_counts.get(region, 0) + 1
 
-        provider_tf_path = os.path.join(terraform_dir, "provider.tf")
-        generate_provider_tf(aws_regions, provider_tf_path)
+            duplicate_regions = {region: count for region,
+                                 count in region_counts.items() if count > 1}
+            if duplicate_regions:
+                print(f"注意：发现重复区域: {duplicate_regions}")
+                print("将自动为每个区域创建实例。如需更精细控制，请在config.json中添加region_instance_counts配置。")
 
-        variables_tf_path = os.path.join(terraform_dir, "variables.tf")
-        # Assuming generate_variables_tf needs regions, path, ami_ids
-        generate_variables_tf(aws_regions, variables_tf_path, ami_ids)
+        print(
+            f"Generating Terraform files for {len(regions)} regions: {', '.join(regions)}")
 
-        main_tf_path = os.path.join(terraform_dir, "main.tf")
-        # Assuming generate_main_tf needs regions, path, region_instance_counts
-        generate_main_tf(aws_regions, main_tf_path, region_instance_counts)
+        # 获取最新的AMI IDs
+        ami_ids = get_latest_ami_ids(regions)
 
-        outputs_tf_path = os.path.join(terraform_dir, "outputs.tf")
-        # Assuming generate_outputs_tf needs regions, path
-        generate_outputs_tf(aws_regions, outputs_tf_path)
+        # Generate Terraform files
+        generate_main_tf(regions, os.path.join(
+            terraform_dir, "main.tf"), region_instance_counts)
+        generate_provider_tf(regions, os.path.join(
+            terraform_dir, "provider.tf"))
+        generate_outputs_tf(regions, os.path.join(terraform_dir, "outputs.tf"))
+        update_variables_tf(regions, os.path.join(
+            terraform_dir, "variables.tf"), ami_ids)
 
-        print("Terraform configuration files generated successfully.")
-        return 0
+        print("Terraform configuration files generated successfully")
 
-    except FileNotFoundError:
-        print(f"Error: Config file not found at {config_path}")
-        return 1
-    except json.JSONDecodeError:
-        print(f"Error: Could not decode JSON from {config_path}")
-        return 1
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        # Print traceback for detailed debugging
-        import traceback
-        traceback.print_exc()
-        return 1
+        print(f"Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Generate Terraform configuration files from config.json")
-    # Make config path relative to project root for consistency
-    parser.add_argument("--config", default="config.json",
-                        help="Path to the configuration JSON file (relative to project root)")
-    parser.add_argument("--terraform-dir", default="terraform",
-                        help="Directory to output Terraform files (relative to project root)")
-    args = parser.parse_args()
-
-    # Construct absolute paths based on project root
-    # project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Already defined globally
-    abs_config_path = os.path.join(project_root, args.config)
-    abs_terraform_dir = os.path.join(project_root, args.terraform_dir)
-
-    # Call generate_terraform with the correct arguments from command line
-    sys.exit(generate_terraform(config_path=abs_config_path, terraform_dir=abs_terraform_dir))
+    main()
