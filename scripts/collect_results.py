@@ -10,12 +10,13 @@ import glob
 from datetime import datetime
 import re
 
+
 def parse_iperf3_result(result_file):
     """parse the iperf3 json result file"""
     try:
         with open(result_file, 'r') as f:
             data = json.load(f)
-        
+
         # extract the key performance metrics
         if 'end' in data:
             if data.get('error'):
@@ -24,7 +25,7 @@ def parse_iperf3_result(result_file):
                     'error_msg': data.get('error'),
                     'file': result_file
                 }
-            
+
             # TCP test results
             if 'sum_received' in data['end']:
                 return {
@@ -50,7 +51,7 @@ def parse_iperf3_result(result_file):
                     'lost_percent': data['end']['sum'].get('lost_percent', 0),
                     'file': result_file
                 }
-        
+
         return {
             'status': 'unknown',
             'file': result_file
@@ -63,31 +64,35 @@ def parse_iperf3_result(result_file):
             'file': result_file
         }
 
+
 def extract_region_info(filename):
     """extract the region info from the filename"""
     try:
         # for the p2p test files: p2p_<server_ip>_to_<client_ip>_<timestamp>.json
         if filename.startswith('p2p_'):
             return None  # the p2p test files do not contain region info directly
-        
+
         # for the udp test files: udp_multicast_<server_ip>_to_<client_ip>_<timestamp>.json
         elif filename.startswith('udp_multicast_'):
             return None  # the udp test files do not contain region info directly
-        
+
         return None
     except:
         return None
+
 
 def collect_results(data_dir, output_file=None):
     """collect and format the test results"""
     # find all the test result files
     p2p_files = glob.glob(os.path.join(data_dir, 'p2p_*.json'))
     udp_files = glob.glob(os.path.join(data_dir, 'udp_multicast_*.json'))
-    
+
     # first find and parse the summary files to get the region info
-    p2p_summary_files = glob.glob(os.path.join(data_dir, 'p2p_test_summary_*.json'))
-    udp_summary_files = glob.glob(os.path.join(data_dir, 'udp_multicast_summary_*.json'))
-    
+    p2p_summary_files = glob.glob(os.path.join(
+        data_dir, 'p2p_test_summary_*.json'))
+    udp_summary_files = glob.glob(os.path.join(
+        data_dir, 'udp_multicast_summary_*.json'))
+
     # create the ip to region map
     ip_to_region_map = {}
     # first get the region info from the udp summary files
@@ -103,14 +108,15 @@ def collect_results(data_dir, output_file=None):
                     server_ip = summary.get('server_ip')
                     if server_ip and server_region:
                         ip_to_region_map[server_ip] = server_region
-                    
+
                     for i, result in enumerate(summary.get('results', [])):
                         client_ip = result.get('client_ip')
                         if client_ip and i < len(summary.get('client_regions', [])):
                             ip_to_region_map[client_ip] = summary['client_regions'][i]
         except Exception as e:
-            print(f"warning: failed to parse the udp summary file {summary_file}: {e}")
-    
+            print(
+                f"warning: failed to parse the udp summary file {summary_file}: {e}")
+
     p2p_region_map = {}
     for summary_file in p2p_summary_files:
         try:
@@ -123,8 +129,9 @@ def collect_results(data_dir, output_file=None):
                         'target_region': test['target_region']
                     }
         except Exception as e:
-            print(f"warning: failed to parse the p2p summary file {summary_file}: {e}")
-    
+            print(
+                f"warning: failed to parse the p2p summary file {summary_file}: {e}")
+
     # parse the p2p test results
     p2p_results = []
     for file in p2p_files:
@@ -132,23 +139,23 @@ def collect_results(data_dir, output_file=None):
             result = parse_iperf3_result(file)
             filename = os.path.basename(file)
             region_info = extract_region_info(filename)
-            
+
             if region_info:
                 result.update(region_info)
-            
+
             # get the region info from the region map
             if filename in p2p_region_map:
                 result.update(p2p_region_map[filename])
-            
+
             p2p_results.append(result)
-    
+
     # parse the udp test results
     udp_results = []
     for file in udp_files:
         if 'summary' not in file:  # skip the summary files
             result = parse_iperf3_result(file)
             filename = os.path.basename(file)
-            
+
             # try to get the region info from the file
             try:
                 with open(file, 'r') as f:
@@ -159,42 +166,44 @@ def collect_results(data_dir, output_file=None):
                         result['client_region'] = file_data['client_region']
             except Exception:
                 pass
-            
+
             # if there is no region info, try to get the region info from the filename
             if 'server_region' not in result or 'client_region' not in result:
                 ip_info = extract_ip_info(filename)
                 if ip_info:
                     server_ip = ip_info.get('server_ip')
                     client_ip = ip_info.get('client_ip')
-                    
+
                     if server_ip and server_ip in ip_to_region_map:
                         result['server_region'] = ip_to_region_map[server_ip]
-                    
+
                     if client_ip and client_ip in ip_to_region_map:
                         result['client_region'] = ip_to_region_map[client_ip]
-            
+
             udp_results.append(result)
-    
+
     # integrate all the results
     all_results = {
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'point_to_point_tests': p2p_results,
         'udp_multicast_tests': udp_results
     }
-    
+
     # save the results
     if output_file:
         output_path = output_file
     else:
-        output_path = os.path.join(data_dir, f'collected_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json')
-    
+        output_path = os.path.join(
+            data_dir, f'collected_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json')
+
     with open(output_path, 'w') as f:
         json.dump(all_results, f, indent=2)
-    
+
     print(f"test results collected and saved to: {output_path}")
     print(f"total {len(p2p_results)} p2p tests and {len(udp_results)} udp tests")
-    
+
     return output_path
+
 
 def extract_ip_info(filename):
     """extract the ip info from the filename"""
@@ -207,19 +216,23 @@ def extract_ip_info(filename):
         }
     return None
 
+
 def main():
-    parser = argparse.ArgumentParser(description="collect and format the iperf3 test results")
-    parser.add_argument("--data-dir", default="../data", help="the data directory for the test results")
+    parser = argparse.ArgumentParser(
+        description="collect and format the iperf3 test results")
+    parser.add_argument("--data-dir", default="../data",
+                        help="the data directory for the test results")
     parser.add_argument("--output", help="the output file path")
-    
+
     args = parser.parse_args()
-    
+
     # ensure the data directory exists
     if not os.path.isdir(args.data_dir):
         print(f"error: the data directory {args.data_dir} does not exist")
         sys.exit(1)
-    
+
     collect_results(args.data_dir, args.output)
+
 
 if __name__ == "__main__":
     main()

@@ -4,25 +4,47 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
 
 # Team Members
 
-![Hanliang Song](imgs/hs67.jpg){width=100}
+---
 
-***Hanliang Song***
+### Hanliang Song (hs67)
+
+<img src="imgs/hs67.jpg" alt="Hanliang Song" width="100"/>
 
 I am currently a master student majoring in Financial Engineering at UIUC graduating in December 2025. I have strong hands-on experience in building high-frequency trading systems, low-latency infrastructure, and quantitative research pipelines. Skilled in C++, Python, Docker, and Linux, I have developed real-time trading systems based on CTP APIs, asynchronous backtesting frameworks, and event-driven crypto strategies.
 
-Email: [hs67@illinois.edu](mailto:hs67@illinois.edu)LinkedIn: https://www.linkedin.com/in/hanliang-song/
-Github: https://github.com/hanksong
+Email: [hs67@illinois.edu](mailto:hs67@illinois.edu)
+LinkedIn: [https://www.linkedin.com/in/hanliang-song/](https://www.linkedin.com/in/hanliang-song/)
+Github: [https://github.com/hanksong](https://github.com/hanksong)
 
-- Tim Rolsh (rolshud2)
-- Austin Belman (abelma2)
+---
 
-![David Mun](imgs/davidm16.jpeg){width=100}
-***David Mun***
+### Tim Rolsh (rolshud2)
+
+<img src="imgs/rolshud2.jpg" alt="Tim Rolsh" width="100"/>
+
+I am an undergraduate student at the University of Illinois Urbana-Champaign pursuing a BSLAS in Statistics and Computer Science, expected graduation May 2027. Full-stack software engineer and clean code practitioner. Open to internship opportunities and part-time roles during studies, seeking full-time positions starting May 2027.
+
+- LinkedIn: [https://www.linkedin.com/in/tim-rolsh-492088261/](https://www.linkedin.com/in/tim-rolsh-492088261/)
+- GitHub: [https://github.com/timrolsh](https://github.com/timrolsh)
+
+---
+
+### Austin Belman (abelma2)
+
+- *Details for Austin Belman can be added here.*
+
+---
+
+### David Mun (davidm16)
+
+<img src="imgs/davidm16.jpeg" alt="David Mun" width="100"/>
 
 I am currently a junior studying Computer Engineering at UIUC graduating in Spring 2026. I have previous experience working with low-latency C++ embedded systems at Rivian and I am currently working at DRW as a software engineering intern. I am interested in intersecting my understanding of computer systems with trading, and I am motivated by solving hard problems.
 
 Email: [davidm16@illinois.edu](mailto:davidm16@illinois.edu)
-LinkedIn: https://www.linkedin.com/in/davidmun910/
+LinkedIn: [https://www.linkedin.com/in/davidmun910/](https://www.linkedin.com/in/davidmun910/)
+
+---
 
 # Features
 
@@ -142,16 +164,19 @@ Sample configuration files are provided in the `terraform/config.json` directory
    git clone https://github.com/yourusername/aws-network-benchmark.git
    cd aws-network-benchmark
    ```
+
 2. Install dependencies:
 
    ```
    pip install -r requirements.txt
    ```
+
 3. Configure AWS credentials:
 
    ```
    aws configure
    ```
+
 4. Modify the `config.json` configuration file (optional):
 
    ```json
@@ -165,8 +190,8 @@ Sample configuration files are provided in the `terraform/config.json` directory
    }
    ```
 
-   * Set `use_private_ip` to `true` to use private IPs for testing (when using VPC Peering or other connection methods within the same region)
-   * Set `use_private_ip` to `false` (default) to use public IPs for testing (for general cross-region scenarios)
+   - Set `use_private_ip` to `true` to use private IPs for testing (when using VPC Peering or other connection methods within the same region)
+   - Set `use_private_ip` to `false` (default) to use public IPs for testing (for general cross-region scenarios)
 5. Run the benchmark:
 
 ```bash
@@ -196,7 +221,7 @@ Issues and pull requests are welcome.
 
 ## Troubleshooting
 
-### cannot automatically import ssh key to aws, please run the following command to import manually:
+### cannot automatically import ssh key to aws, please run the following command to import manually
 
 ```
 aws ec2 import-key-pair --region us-east-1 --key-name aws-network-benchmark --public-key-material fileb://$HOME/.ssh/aws-network-benchmark.pub

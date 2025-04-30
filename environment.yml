@@ -10,5 +10,8 @@ dependencies:
     - jinja2
     - numpy
     - boto3
+    - streamlit
+    - pandas-stubs
     - pip:
         - types-boto3
+        - watchdog

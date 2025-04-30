@@ -79,3 +79,6 @@ runs/
 .project
 .classpath
 .settings/
+
+# Visualization result files output
+visualization
