@@ -8,15 +8,22 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
 
 ### Hanliang Song (hs67)
 
-- MS in Financial Engineering 2025' | Quant Developer | Seeking for full-time position starting Dec 2025.
+<img src="imgs/hs67.jpg" alt="Hanliang Song" width="100"/>
+
+I am currently a master student majoring in Financial Engineering at UIUC graduating in December 2025. I have strong hands-on experience in building high-frequency trading systems, low-latency infrastructure, and quantitative research pipelines. Skilled in C++, Python, Docker, and Linux, I have developed real-time trading systems based on CTP APIs, asynchronous backtesting frameworks, and event-driven crypto strategies.
+
+Email: [hs67@illinois.edu](mailto:hs67@illinois.edu)
+LinkedIn: [https://www.linkedin.com/in/hanliang-song/](https://www.linkedin.com/in/hanliang-song/)
+Github: [https://github.com/hanksong](https://github.com/hanksong)
 
 ---
 
 ### Tim Rolsh (rolshud2)
 
-<img src="imgs/rolshud2.jpg" alt="Tim Rolsh" width="300"/>
+<img src="imgs/rolshud2.jpg" alt="Tim Rolsh" width="100"/>
 
-- Undergraduate student at the University of Illinois Urbana-Champaign pursuing a BSLAS in Statistics and Computer Science, expected graduation May 2027. Full-stack software engineer and clean code practitioner. Open to internship opportunities and part-time roles during studies, seeking full-time positions starting May 2027.
+I am an undergraduate student at the University of Illinois Urbana-Champaign pursuing a BSLAS in Statistics and Computer Science, expected graduation May 2027. Full-stack software engineer and clean code practitioner. Open to internship opportunities and part-time roles during studies, seeking full-time positions starting May 2027.
+
 - LinkedIn: [https://www.linkedin.com/in/tim-rolsh-492088261/](https://www.linkedin.com/in/tim-rolsh-492088261/)
 - GitHub: [https://github.com/timrolsh](https://github.com/timrolsh)
 
@@ -24,18 +31,18 @@ A comprehensive suite for benchmarking network performance between Amazon EC2 in
 
 ### Austin Belman (abelma2)
 
-- add here
+- *Details for Austin Belman can be added here.*
 
 ---
 
 ### David Mun (davidm16)
 
-<img src="imgs/davidm16.jpeg" alt="David Mun" width="300"/>
+<img src="imgs/davidm16.jpeg" alt="David Mun" width="100"/>
 
 I am currently a junior studying Computer Engineering at UIUC graduating in Spring 2026. I have previous experience working with low-latency C++ embedded systems at Rivian and I am currently working at DRW as a software engineering intern. I am interested in intersecting my understanding of computer systems with trading, and I am motivated by solving hard problems.
 
 Email: [davidm16@illinois.edu](mailto:davidm16@illinois.edu)
-LinkedIn: <https://www.linkedin.com/in/davidmun910/>
+LinkedIn: [https://www.linkedin.com/in/davidmun910/](https://www.linkedin.com/in/davidmun910/)
 
 ---
 
