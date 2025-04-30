@@ -247,8 +247,8 @@ def main():
                         cwd=abs_terraform_dir, check=False)
         sys.exit(1)
     print(f"Instance information saved to: {instance_info_file}")
-    print("Waiting 5 seconds for instances to fully initialize SSH...")
-    time.sleep(5)
+    print("Waiting 30 seconds for instances to fully initialize SSH...")
+    time.sleep(30)
 
     # --- 5. Run Benchmark Tests ---
     print("\n--- Step 5: Running Benchmark Tests ---")
@@ -262,6 +262,7 @@ def main():
         print("\n--- Running Latency Test ---")
         try:
             latency_summary = run_latency_benchmark(
+                ssh_user=ssh_user,
                 instance_info_path=instance_info_file,
                 ssh_key_path=ssh_key_path,  # Pass absolute path
                 ping_count=20,  # Example value, consider making configurable
@@ -315,6 +316,7 @@ def main():
                     instance_info_path=instance_info_file,
                     ssh_key_path=ssh_key_path,  # Pass absolute path
                     output_dir=abs_data_dir,
+                    ssh_user=ssh_user,  # Pass ssh_user as a keyword argument
                     use_private_ip=config['use_private_ip'],
                     server_region=config['udp_server_region'],
                     bandwidth=config['udp_bandwidth'],

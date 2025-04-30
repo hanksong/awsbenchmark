@@ -12,13 +12,16 @@ import pandas as pd
 
 def run_remote_command(ip, cmd, ssh_key_path):
     """Runs a command on a remote machine."""
-    stdout, stderr = subprocess.Popen(
-        [f"ssh -i {ssh_key_path} -o StrictHostKeyChecking=no ec2-user@{ip} {cmd}"],
+    proc = subprocess.Popen(
+        f"ssh -i {ssh_key_path} -o StrictHostKeyChecking=no ec2-user@{ip} {cmd}",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=True
-    ).communicate()
-    return stdout, stderr
+        shell=True,
+        text=True,               # ← add this
+        universal_newlines=True  # ← or this for older Python
+    )
+    out_str, err_str = proc.communicate()
+    return out_str, err_str
 
 
 def kill_iperf_servers(all_instance_ips, ssh_key_path):
@@ -193,15 +196,17 @@ def point_to_point_test(instance_info_path, ssh_key_path, duration, parallel, ou
         df = pd.DataFrame(results)
         df.to_csv(output_file, index=False)
         print(f"\nPoint-to-point test results saved to {output_file}")
-        return output_file # Return the path to the results CSV
+        return output_file  # Return the path to the results CSV
     else:
         print("\nNo point-to-point test results generated.")
-        return None # Return None if no results
+        return None  # Return None if no results
 
     # The original return 0 is removed as we return the path now
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run point-to-point iperf3 tests")
+    parser = argparse.ArgumentParser(
+        description="Run point-to-point iperf3 tests")
     # ... (keep argparse for potential standalone use/testing) ...
     args = parser.parse_args()
     point_to_point_test(

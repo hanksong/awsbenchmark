@@ -139,7 +139,7 @@ def write_csv_summary(results, output_dir):
 # Rename main and modify to accept arguments directly
 
 
-def run_latency_benchmark(instance_info_path, ssh_key_path, ping_count, output_dir, all_regions, use_private_ip, intra_region, source_region=None, target_region=None):
+def run_latency_benchmark(instance_info_path, ssh_key_path, ping_count, output_dir, all_regions, use_private_ip, intra_region, source_region=None, target_region=None, ssh_user="ec2-user"):
     """Executes latency tests based on provided parameters."""
     # Load instance information
     instance_data = load_instance_info(instance_info_path)
