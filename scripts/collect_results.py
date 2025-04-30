@@ -7,6 +7,7 @@ import argparse
 import os
 import sys
 import re
+import shutil
 
 
 def parse_iperf3_result(result_file):
@@ -91,121 +92,47 @@ def extract_ip_info(filename):
     return None
 
 
+def collect_results(source_dir, target_dir, file_pattern="*.json"):
+    """Collects result files from a source directory to a target directory."""
+    # Ensure target directory exists
+    os.makedirs(target_dir, exist_ok=True)
+
+    print(f"Collecting files matching '{file_pattern}' from {source_dir} to {target_dir}...")
+    collected_count = 0
+    try:
+        for filename in os.listdir(source_dir):
+            # Simple pattern matching (can be enhanced with glob or regex if needed)
+            if filename.endswith(".json") or filename.endswith(".csv") or filename.endswith(".txt"):
+                source_path = os.path.join(source_dir, filename)
+                target_path = os.path.join(target_dir, filename)
+                if os.path.isfile(source_path):
+                    try:
+                        shutil.copy2(source_path, target_path)  # copy2 preserves metadata
+                        print(f"  Copied: {filename}")
+                        collected_count += 1
+                    except Exception as copy_e:
+                        print(f"  Error copying {filename}: {copy_e}")
+
+        print(f"Collected {collected_count} result files.")
+        return 0  # Indicate success
+    except FileNotFoundError:
+        print(f"Error: Source directory not found: {source_dir}")
+        return 1  # Indicate failure
+    except Exception as e:
+        print(f"An unexpected error occurred during collection: {e}")
+        return 1  # Indicate failure
+
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="collect and format the iperf3 test results")
-    parser.add_argument("--data-dir", default="../data",
-                        help="the data directory for the test results")
-    parser.add_argument("--output", help="the output file path")
+    parser = argparse.ArgumentParser(description="Collect benchmark result files.")
+    parser.add_argument("--source-dir", required=True, help="Directory containing raw result files.")
+    parser.add_argument("--target-dir", required=True, help="Directory to copy result files into.")
 
     args = parser.parse_args()
 
-    # ensure the data directory exists
-    if not os.path.isdir(args.data_dir):
-        print(f"error: the data directory {args.data_dir} does not exist")
+    if collect_results(args.source_dir, args.target_dir) != 0:
         sys.exit(1)
-
-    collect_results(args.data_dir, args.output)
-
-
-def collect_results(instance_info_path, ssh_key_path, remote_dir, local_dir, file_pattern):
-    """Collects benchmark result files from EC2 instances."""
-    try:
-        with open(instance_info_path, 'r') as f:
-            instance_info = json.load(f)
-    except FileNotFoundError:
-        print(f"Error: Instance info file not found at {instance_info_path}")
-        return 1
-    except json.JSONDecodeError:
-        print(f"Error: Could not decode JSON from {instance_info_path}")
-        return 1
-
-    # Use public IPs for SCP/SSH access
-    ip_key = 'public_ips'
-    print(f"Using {ip_key} for collecting results.")
-
-    regions = list(instance_info['instances'].keys())
-    collected_files = []
-
-    # Ensure local directory exists
-    os.makedirs(local_dir, exist_ok=True)
-
-    print(
-        f"Collecting files matching '{file_pattern}' from '{remote_dir}' on all instances...")
-
-    for region in regions:
-        instance_ips = get_ips(instance_info, ip_key, [region])
-        if not instance_ips:
-            print(
-                f"Warning: No {ip_key} found for region {region}, skipping collection.")
-            continue
-
-        for ip_address in instance_ips:
-            print(f"  Connecting to {ip_address} ({region})...")
-            # Use scp to copy files
-            # Construct the source path carefully
-            remote_path = f"ubuntu@{ip_address}:{os.path.join(remote_dir, file_pattern)}"
-            scp_command = f"scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {ssh_key_path} {remote_path} {local_dir}/"
-
-            print(f"    Executing: {scp_command}")
-            try:
-                # Use subprocess.run for better control and error handling than run_remote_command
-                result = subprocess.run(
-                    scp_command, shell=True, check=True, capture_output=True, text=True)
-                print(f"    SCP stdout:\n{result.stdout}")
-                # Note: SCP might not list files transferred on stdout unless verbose.
-                # We might need to list the local_dir afterwards to confirm.
-                print(f"    Successfully collected files from {ip_address}")
-                # Add logic here to list collected files if needed
-            except subprocess.CalledProcessError as e:
-                print(f"    Error collecting files from {ip_address}:")
-                print(f"    Command: {e.cmd}")
-                print(f"    Return code: {e.returncode}")
-                print(f"    Stderr: {e.stderr}")
-            except Exception as e:
-                print(f"    An unexpected error occurred during SCP: {e}")
-
-    # Optional: Verify files were collected by listing local_dir
-    print(f"\nFiles collected in {local_dir}:")
-    try:
-        files_in_local_dir = os.listdir(local_dir)
-        if files_in_local_dir:
-            for f in files_in_local_dir:
-                # Potentially filter for expected patterns if needed
-                print(f"  - {f}")
-                collected_files.append(os.path.join(local_dir, f))
-        else:
-            print("  No files found in local directory after collection.")
-    except Exception as e:
-        print(f"  Error listing local directory: {e}")
-
-    print("\nFile collection finished.")
-    # Return the list of collected file paths (or just indicate success/failure)
-    # For now, just return success code
-    return 0  # Indicate success
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Collect benchmark result files from EC2 instances.")
-    parser.add_argument("--instance-info", required=True,
-                        help="Path to the instance info JSON file.")
-    parser.add_argument("--ssh-key", required=True,
-                        help="Path to the SSH private key.")
-    parser.add_argument("--remote-dir", default="/tmp/benchmark_results",
-                        help="Directory on remote instances containing results.")
-    parser.add_argument("--local-dir", required=True,
-                        help="Local directory to save collected results.")
-    parser.add_argument("--file-pattern", default="*.json",
-                        help="Pattern of result files to collect (e.g., '*.json', 'results_*.csv').")
-
-    args = parser.parse_args()
-
-    exit_code = collect_results(
-        instance_info_path=args.instance_info,
-        ssh_key_path=args.ssh_key,
-        remote_dir=args.remote_dir,
-        local_dir=args.local_dir,
-        file_pattern=args.file_pattern
-    )
-    sys.exit(exit_code)
+    main()
